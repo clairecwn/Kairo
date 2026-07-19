@@ -1,0 +1,10 @@
+{
+  "name": "Kairo",
+  "short_name": "Kairo",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "description": "A tablet-first handwriting workspace for long solutions without scrolling."
+}

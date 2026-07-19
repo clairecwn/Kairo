@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#FAF9F5">
+    <title>Kairo</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#128395;</text></svg>">
+    <link rel="manifest" href="./manifest.json">
+    <link rel="stylesheet" href="./css/app.css">
+  </head>
+  <body>
+    <main class="app-shell" aria-label="Kairo handwriting workspace">
+      <header class="top-bar">
+        <div class="brand" title="Kairo">Kairo</div>
+
+        <section class="question-band" aria-label="Pinned question">
+          <button class="question-preview" type="button" title="Enlarge question">
+            <img class="question-image" alt="Pinned problem statement" hidden>
+          </button>
+          <label class="chip-button" for="question-input" title="Upload question image (or paste with Ctrl+V)">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 14l3.5-4.5 2.5 3 2-2.5L16 14H4zm10-6a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM3 3h14a1 1 0 011 1v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+          </label>
+          <input id="question-input" class="question-file-input" type="file" accept="image/*">
+        </section>
+
+        <div class="tool-groups">
+          <div class="tool-group" role="toolbar" aria-label="Drawing tools">
+            <button class="tool-button" data-tool="pen" data-popover="pen-popover" title="Pen">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 16.5l1-4L13 4l3 3-8.5 8.5-4 1zM11.5 5.5l3 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span class="pen-swatch" data-pen-swatch></span>
+            </button>
+            <button class="tool-button" data-tool="highlighter" title="Highlighter">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 17h5M6.5 13.5L4.5 16l1 1 3-1.5m-2-2l7-7 3 3-7 7m-3-3l3 3M13 5l2-2 2 2-2 2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="tool-button" data-tool="eraser" title="Eraser">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 16l-4.5-4.5a1 1 0 010-1.4l6-6a1 1 0 011.4 0L16 9.2a1 1 0 010 1.4L10.6 16H8zm-1.5-8l5 5M8 16h8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="tool-button" data-tool="text" data-popover="text-popover" title="Text box">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 5h12M10 5v10m-2.5 0h5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+
+          <div class="tool-group">
+            <button class="tool-button" data-action="undo" title="Undo (Ctrl+Z)">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7.5 5L4 8.5 7.5 12M4 8.5h8a4 4 0 010 8h-2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="tool-button" data-action="redo" title="Redo (Ctrl+Y)">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M12.5 5L16 8.5 12.5 12M16 8.5H8a4 4 0 000 8h2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+
+          <div class="tool-group">
+            <button class="tool-button" data-popover="page-popover" title="Page style">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 3h10a1 1 0 011 1v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1zm2 4h6M7 10h6M7 13h4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+            </button>
+            <button class="tool-button" data-action="help" title="Show walkthrough" aria-label="Show walkthrough">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 8a2 2 0 113.4 1.4c-.7.6-1.4 1-1.4 2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="10" cy="14" r="0.9" fill="currentColor"/></svg>
+            </button>
+            <button class="tool-button" data-action="theme" title="Light / dark mode" aria-label="Toggle light or dark mode">
+              <svg class="icon-sun" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="3.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M15.3 4.7l-1.4 1.4M6.1 13.9l-1.4 1.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+              <svg class="icon-moon" viewBox="0 0 20 20" aria-hidden="true"><path d="M16 12.5A6.5 6.5 0 017.5 4a6.5 6.5 0 108.5 8.5z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div class="popover" id="pen-popover" hidden>
+        <div class="popover-row" data-pen-colors></div>
+        <div class="popover-row" data-pen-sizes></div>
+      </div>
+      <div class="popover" id="text-popover" hidden>
+        <div class="popover-row" data-text-fonts></div>
+        <div class="popover-row" data-text-colors></div>
+      </div>
+      <div class="popover" id="page-popover" hidden>
+        <div class="popover-label">Paper</div>
+        <div class="popover-row" data-backgrounds></div>
+        <div class="popover-label">Width</div>
+        <div class="popover-row" data-page-sizes></div>
+      </div>
+
+      <section class="stage-wrap">
+        <section class="ink-stage" aria-label="Handwriting surface">
+          <canvas id="committed-canvas" class="ink-canvas" aria-hidden="true"></canvas>
+          <canvas id="wet-canvas" class="ink-canvas" aria-label="Write solution"></canvas>
+        </section>
+      </section>
+    </main>
+
+    <script>
+      // Set this to your deployed backend proxy URL (e.g. Render service URL) before deploying the frontend.
+      // Leave empty to use http://127.0.0.1:8787 automatically when running on localhost.
+      window.KAIRO_PROXY_URL = "";
+    </script>
+    <script type="module" src="./js/main.js"></script>
+  </body>
+</html>
