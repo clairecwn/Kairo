@@ -1,0 +1,92 @@
+import { resolveStrokeColor } from "./render.js";
+
+export function installText({ stage, tools }) {
+  const layer = document.createElement("div");
+  layer.className = "text-layer";
+  stage.appendChild(layer);
+  let nextId = 1;
+
+  function addTextBox(point, options = {}) {
+    const wrap = document.createElement("div");
+    wrap.className = "text-box";
+    wrap.dataset.textId = `text-${nextId}`;
+    nextId += 1;
+    wrap.style.left = `${point.x}px`;
+    wrap.style.top = `${point.y}px`;
+
+    const editable = document.createElement("div");
+    editable.className = "text-box-input";
+    editable.contentEditable = "true";
+    editable.spellcheck = false;
+    editable.style.fontFamily = options.fontStack || tools.getFontStack();
+    editable.style.color = resolveStrokeColor(options.color || tools.state.textColor);
+    editable.dataset.colorId = options.color || tools.state.textColor;
+    if (options.text) {
+      editable.textContent = options.text;
+    }
+
+    const remove = document.createElement("button");
+    remove.className = "text-box-remove";
+    remove.type = "button";
+    remove.title = "Delete text";
+    remove.textContent = "×";
+
+    wrap.appendChild(editable);
+    wrap.appendChild(remove);
+    layer.appendChild(wrap);
+
+    function destroy() {
+      wrap.remove();
+    }
+
+    remove.addEventListener("pointerdown", (event) => event.stopPropagation());
+    remove.addEventListener("click", (event) => {
+      event.preventDefault();
+      const snapshot = snapshotOf(wrap, editable);
+      destroy();
+      tools.history.push({
+        undo: () => addTextBox(snapshot.point, snapshot),
+        redo: () => {
+          const again = layer.querySelector(`[data-text-id="${wrap.dataset.textId}"]`);
+          if (again) {
+            again.remove();
+          }
+        }
+      });
+    });
+
+    editable.addEventListener("blur", () => {
+      if (!editable.textContent.trim()) {
+        destroy();
+      }
+    });
+
+    wrap.addEventListener("pointerdown", (event) => event.stopPropagation());
+
+    window.setTimeout(() => editable.focus(), 0);
+
+    tools.history.push({
+      undo: () => destroy(),
+      redo: () => layer.appendChild(wrap)
+    });
+
+    return wrap;
+  }
+
+  function refreshColors() {
+    for (const editable of layer.querySelectorAll(".text-box-input")) {
+      editable.style.color = resolveStrokeColor(editable.dataset.colorId || "auto");
+    }
+  }
+
+  return { addTextBox, refreshColors };
+}
+
+function snapshotOf(wrap, editable) {
+  return {
+    point: { x: parseFloat(wrap.style.left), y: parseFloat(wrap.style.top) },
+    text: editable.textContent,
+    fontStack: editable.style.fontFamily,
+    color: editable.dataset.colorId
+  };
+}
