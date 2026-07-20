@@ -21,6 +21,21 @@ export const PAGE_SIZES = [
 
 export function installTools() {
   const saved = readSaved();
+  // One-time forced reset: prior sessions may have persisted compact:"auto"
+  // (the old default) to storage. Compaction's own visual rearrangement —
+  // even working exactly as designed — has been reported repeatedly as
+  // unwanted movement, so this session force-overrides any saved "auto"
+  // once. Later explicit choices are respected normally after that.
+  let compact = saved.compact || "off";
+  try {
+    if (!window.localStorage.getItem("kairo.compactResetV2")) {
+      compact = "off";
+      window.localStorage.setItem("kairo.compactResetV2", "1");
+    }
+  } catch {
+    // Storage unavailable; the plain default above still applies.
+  }
+
   const state = {
     tool: "pen",
     penType: saved.penType || "pen",
@@ -31,8 +46,14 @@ export function installTools() {
     theme: saved.theme || "light",
     background: saved.background || "ruled",
     pageSize: saved.pageSize || "full",
-    compact: saved.compact || "auto"
+    compact
   };
+  if (compact !== saved.compact) {
+    // The forced reset changed the effective value — write it back now so a
+    // reload (before any other setting changes) doesn't revert to the stale
+    // saved "auto".
+    persist(state);
+  }
   const listeners = new Set();
 
   const history = {
