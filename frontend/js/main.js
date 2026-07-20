@@ -58,10 +58,14 @@ const layout = installLayout({
   getLines,
   getStrokes,
   getCompactMode: () => tools.state.compact,
-  // Stage-local (pre-zoom) y of the current visible top — a tall A4/A3 page
-  // must still compact within what's ON SCREEN, not the whole sheet, or
-  // "auto" compaction would never seem to engage.
-  getViewportTop: () => stageWrap.scrollTop / zoom
+  // A STABLE "one screenful" budget, anchored to wherever the pen currently
+  // is — NOT the live scroll position. Using scrollTop directly caused a
+  // feedback loop: auto-scroll advances as you write down a tall page, which
+  // advanced the compaction threshold, which retroactively recompacted
+  // already-settled older lines on every single new line. This must only
+  // depend on the viewport's SIZE (stable) and the anchor's own position
+  // (monotonically advancing), never on scroll, which auto-follows the pen.
+  getClientHeight: () => stageWrap.clientHeight / zoom
 });
 const pins = installPins({
   stage: inkStage,

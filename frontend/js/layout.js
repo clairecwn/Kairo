@@ -13,7 +13,7 @@ let getLines = null;
 let getStrokes = null;
 let getLineDy = () => 0;
 let getCompactMode = () => "auto";
-let getViewportTop = () => 0;
+let getClientHeight = () => Infinity;
 let penPosition = null;
 let penIsDown = false;
 let queuedLayout = false;
@@ -35,8 +35,8 @@ export function installLayout(options) {
   if (options.getCompactMode) {
     getCompactMode = options.getCompactMode;
   }
-  if (options.getViewportTop) {
-    getViewportTop = options.getViewportTop;
+  if (options.getClientHeight) {
+    getClientHeight = options.getClientHeight;
   }
 
   historyLayer = document.createElement("div");
@@ -258,13 +258,14 @@ function getLayoutTargets(lines) {
   void ceilingBottom;
 
   // Compaction engages ONLY when the writer has genuinely run out of VISIBLE
-  // room: either the stack overflows the top of the current viewport (not
-  // the top of the whole page — a tall A4/A3 sheet must still compact within
-  // what's on screen, matching the "never scroll" promise), or a NEW line was
-  // started above older ink (the hop-up into freed space). Then older lines
-  // shrink (never below 50%) and re-stack above the pen. Re-entering an old
-  // line to edit it never triggers this — only writing a brand-new line can.
-  const topMargin = getViewportTop() + TOP_MARGIN;
+  // room: either the stack overflows a one-screenful budget ABOVE THE ANCHOR
+  // (not scroll position — scroll auto-follows the pen, and using it directly
+  // here caused a feedback loop where every auto-scroll nudge retroactively
+  // recompacted already-settled older lines), or a NEW line was started above
+  // older ink (the hop-up into freed space). Then older lines shrink (never
+  // below 50%) and re-stack above the pen. Re-entering an old line to edit it
+  // never triggers this — only writing a brand-new line can.
+  const topMargin = Math.max(0, anchorY - getClientHeight() + TOP_MARGIN);
   const anchorTop = targets[0].y;
   const anchorIsNewest = anchorLine === ordered[ordered.length - 1];
   const hoppedAbove = anchorIsNewest && placed.some((item) => item.y > anchorTop - 4);
