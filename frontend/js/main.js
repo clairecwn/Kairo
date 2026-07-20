@@ -188,7 +188,6 @@ const inkSurface = createInkSurface({
         redo: () => restoreStrokeById(id)
       });
       workspace.markDirty();
-      scrollAnchorIntoView();
       return id;
     },
     getStrokes
@@ -199,30 +198,6 @@ const inkSurface = createInkSurface({
     workspace.markDirty();
   }
 });
-
-// Keeps the line being written on screen even on a page taller than the
-// viewport (A4/A3), so writing never requires a manual scroll.
-function scrollAnchorIntoView() {
-  // Must match the ACTUAL open/re-entered line, not just "the last line by
-  // document order" — otherwise editing an older line via re-entry would
-  // compute the scroll target from the wrong (newest) line entirely.
-  const openLineId = commit.getOpenLineId();
-  const anchor = openLineId ? getLines().find((line) => line.id === openLineId) : null;
-  if (!anchor) {
-    return;
-  }
-  const dy = commit.getLineDy(anchor.id);
-  const anchorTop = (anchor.bbox.minY - dy) * zoom;
-  const anchorBottom = anchorTop + anchor.bbox.height * zoom;
-  const visibleTop = stageWrap.scrollTop;
-  const visibleBottom = visibleTop + stageWrap.clientHeight;
-  const margin = 60;
-  if (anchorBottom > visibleBottom - margin) {
-    stageWrap.scrollTop += anchorBottom - (visibleBottom - margin);
-  } else if (anchorTop < visibleTop + margin) {
-    stageWrap.scrollTop = Math.max(0, anchorTop - margin);
-  }
-}
 
 const erasedRecords = new Map();
 
