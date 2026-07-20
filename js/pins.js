@@ -660,9 +660,10 @@ export function installPins(options) {
 
 function pointFromEvent(event, stage) {
   const rect = stage.getBoundingClientRect();
+  const scale = rect.width > 0 ? stage.offsetWidth / rect.width : 1;
   return {
-    x: event.clientX - rect.left,
-    y: event.clientY - rect.top
+    x: (event.clientX - rect.left) * scale,
+    y: (event.clientY - rect.top) * scale
   };
 }
 

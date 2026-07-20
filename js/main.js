@@ -34,9 +34,16 @@ const committedCanvas = document.querySelector("#committed-canvas");
 const wetCanvas = document.querySelector("#wet-canvas");
 const inkStage = document.querySelector(".ink-stage");
 const stageWrap = document.querySelector(".stage-wrap");
+const stageSizer = document.querySelector(".stage-sizer");
 const homeScreen = document.querySelector(".home-screen");
 const noteTitleInput = document.querySelector(".note-title");
 const sidePanel = document.querySelector(".side-panel");
+
+let zoom = clampZoom(Number(window.localStorage.getItem("kairo.zoom")) || 1);
+
+function clampZoom(value) {
+  return Math.min(2, Math.max(0.5, Number.isFinite(value) ? value : 1));
+}
 
 const tools = installTools();
 
@@ -269,13 +276,64 @@ function eraseAt(point) {
 
 installToolbar();
 installPager();
+installZoom();
 installSidebar();
 installImageIntake();
 installHomeScreen();
 installServiceWorker();
+applyView();
+window.addEventListener("resize", applyView);
 
 // Debug/inspection hook (used by automated tests).
 window.getLines = getLines;
+
+/* ---------- View: page size, zoom, scroll ---------- */
+
+function applyView() {
+  const wrapWidth = stageWrap.clientWidth;
+  const wrapHeight = stageWrap.clientHeight;
+  const widths = {
+    full: wrapWidth,
+    medium: Math.min(860, wrapWidth),
+    narrow: Math.min(640, wrapWidth)
+  };
+  const width = widths[tools.state.pageSize] || wrapWidth;
+  const height = wrapHeight;
+  inkStage.style.width = `${width}px`;
+  inkStage.style.height = `${height}px`;
+  inkStage.style.transform = `scale(${zoom})`;
+  stageSizer.style.width = `${Math.round(width * zoom)}px`;
+  stageSizer.style.height = `${Math.round(height * zoom)}px`;
+  const zoomLabel = document.querySelector(".zoom-label");
+  if (zoomLabel) {
+    zoomLabel.textContent = `${Math.round(zoom * 100)}%`;
+  }
+  inkSurface.resize();
+  scheduleLayout();
+}
+
+function setZoom(value) {
+  zoom = clampZoom(Math.round(value * 100) / 100);
+  try {
+    window.localStorage.setItem("kairo.zoom", String(zoom));
+  } catch {
+    // Storage unavailable; zoom just won't persist.
+  }
+  applyView();
+}
+
+function installZoom() {
+  document.querySelector("[data-zoom='in']").addEventListener("click", () => setZoom(zoom + 0.25));
+  document.querySelector("[data-zoom='out']").addEventListener("click", () => setZoom(zoom - 0.25));
+  document.querySelector("[data-zoom='reset']").addEventListener("click", () => setZoom(1));
+  stageWrap.addEventListener("wheel", (event) => {
+    if (!event.ctrlKey) {
+      return;
+    }
+    event.preventDefault();
+    setZoom(zoom * (event.deltaY < 0 ? 1.1 : 0.9));
+  }, { passive: false });
+}
 
 /* ---------- Image intake (upload + paste straight onto the page) ---------- */
 
@@ -573,19 +631,17 @@ function installToolbar() {
     if (state.background !== "plain") {
       inkStage.classList.add(`bg-${state.background}`);
     }
-    stageWrap.classList.remove(...PAGE_SIZES.map((size) => `size-${size}`));
-    if (state.pageSize !== "full") {
-      stageWrap.classList.add(`size-${state.pageSize}`);
-    }
     for (const button of toolButtons) {
       button.classList.toggle("is-active", button.dataset.tool === state.tool);
       button.setAttribute("aria-pressed", String(button.dataset.tool === state.tool));
     }
-    const swatch = document.querySelector("[data-pen-swatch]");
-    if (swatch) {
-      swatch.style.background = resolveStrokeColor(state.color);
+    // Color the pen/highlighter tips with the active ink color.
+    const tipColor = resolveStrokeColor(state.color);
+    for (const penButton of document.querySelectorAll(".tool-pen")) {
+      penButton.style.setProperty("--tip-color", tipColor);
     }
-    inkStage.style.cursor = state.tool === "eraser" ? "cell" : state.tool === "text" ? "text" : "crosshair";
+    inkStage.dataset.cursor = state.tool;
+    applyView();
   });
 
   for (const button of toolButtons) {

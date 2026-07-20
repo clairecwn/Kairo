@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#F6F7F9">
+    <meta name="theme-color" content="#ECE8DD">
     <title>Kairo</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#128395;</text></svg>">
     <link rel="manifest" href="./manifest.json">
@@ -22,12 +22,19 @@
 
         <div class="tool-groups">
           <div class="tool-group" role="toolbar" aria-label="Drawing tools">
-            <button class="tool-button" data-tool="pen" data-popover="pen-popover" title="Pen">
-              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 16.5l1-4L13 4l3 3-8.5 8.5-4 1zM11.5 5.5l3 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              <span class="pen-swatch" data-pen-swatch></span>
+            <button class="tool-button tool-pen" data-tool="pen" data-popover="pen-popover" title="Pen — tap again for colors & sizes">
+              <svg viewBox="0 0 20 26" aria-hidden="true">
+                <rect x="6.5" y="2" width="7" height="12" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M7.5 14h5L10 21.5 7.5 14z" class="pen-tip" stroke="none"/>
+                <rect x="6.5" y="11" width="7" height="3" rx="1" fill="currentColor" opacity="0.35" stroke="none"/>
+              </svg>
             </button>
-            <button class="tool-button" data-tool="highlighter" title="Highlighter">
-              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 17h5M6.5 13.5L4.5 16l1 1 3-1.5m-2-2l7-7 3 3-7 7m-3-3l3 3M13 5l2-2 2 2-2 2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <button class="tool-button tool-pen" data-tool="highlighter" title="Highlighter">
+              <svg viewBox="0 0 20 26" aria-hidden="true">
+                <rect x="5.5" y="2.5" width="9" height="11" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M7 13.5h6l-1 6H8l-1-6z" class="pen-tip" opacity="0.55" stroke="none"/>
+                <rect x="6.5" y="21" width="7" height="2.4" rx="1.2" class="pen-tip" opacity="0.9" stroke="none"/>
+              </svg>
             </button>
             <button class="tool-button" data-tool="eraser" title="Eraser">
               <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 16l-4.5-4.5a1 1 0 010-1.4l6-6a1 1 0 011.4 0L16 9.2a1 1 0 010 1.4L10.6 16H8zm-1.5-8l5 5M8 16h8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -101,17 +108,23 @@
       </aside>
 
       <section class="stage-wrap">
-        <section class="ink-stage" aria-label="Handwriting surface">
-          <canvas id="committed-canvas" class="ink-canvas" aria-hidden="true"></canvas>
-          <canvas id="wet-canvas" class="ink-canvas" aria-label="Write solution"></canvas>
-        </section>
-        <div class="page-pager" role="navigation" aria-label="Pages">
-          <button type="button" data-page="prev" title="Previous page" aria-label="Previous page">‹</button>
-          <span class="page-pager-label">1 / 1</span>
-          <button type="button" data-page="next" title="Next page" aria-label="Next page">›</button>
-          <button type="button" data-page="add" title="New page" aria-label="New page">＋</button>
+        <div class="stage-sizer">
+          <section class="ink-stage" aria-label="Handwriting surface">
+            <canvas id="committed-canvas" class="ink-canvas" aria-hidden="true"></canvas>
+            <canvas id="wet-canvas" class="ink-canvas" aria-label="Write solution"></canvas>
+          </section>
         </div>
       </section>
+      <div class="page-pager" role="navigation" aria-label="Pages and zoom">
+        <button type="button" data-page="prev" title="Previous page" aria-label="Previous page">‹</button>
+        <span class="page-pager-label">1 / 1</span>
+        <button type="button" data-page="next" title="Next page" aria-label="Next page">›</button>
+        <button type="button" data-page="add" title="New page" aria-label="New page">＋</button>
+        <span class="pager-divider"></span>
+        <button type="button" data-zoom="out" title="Zoom out (Ctrl+scroll)" aria-label="Zoom out">−</button>
+        <button type="button" class="zoom-label" data-zoom="reset" title="Reset zoom" aria-label="Reset zoom">100%</button>
+        <button type="button" data-zoom="in" title="Zoom in (Ctrl+scroll)" aria-label="Zoom in">＋</button>
+      </div>
     </main>
 
     <section class="home-screen" hidden>

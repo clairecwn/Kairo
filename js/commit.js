@@ -169,9 +169,10 @@ export function installCommitController(options) {
 
   function pointFromEvent(event) {
     const rect = stage.getBoundingClientRect();
+    const scale = rect.width > 0 ? stage.offsetWidth / rect.width : 1;
     return {
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top
+      x: (event.clientX - rect.left) * scale,
+      y: (event.clientY - rect.top) * scale
     };
   }
 

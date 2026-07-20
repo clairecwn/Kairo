@@ -1,39 +1,43 @@
 @import url("https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap");
 
 :root {
-  --bg: #F1F3F7;
-  --surface: #FFFFFF;
-  --surface-raised: #FFFFFF;
-  --text: #1B1E24;
-  --text-soft: #667085;
-  --border: #E4E7EC;
-  --accent: #4C6EF5;
-  --accent-soft: rgba(76, 110, 245, 0.12);
-  --danger: #D64545;
-  --paper: #FFFFFF;
-  --surface-tint: #E9EDFA;
-  --surface-tint-strong: #DDE4F8;
-  --rule-line: rgba(27, 30, 36, 0.07);
-  --shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 6px 20px rgba(16, 24, 40, 0.07);
+  --bg: #ECE8DD;
+  --surface: #F7F4EC;
+  --surface-raised: #FDFCF7;
+  --text: #35322B;
+  --text-soft: #7C7669;
+  --border: #DCD6C6;
+  --accent: #5F7D55;
+  --accent-soft: rgba(111, 143, 102, 0.16);
+  --accent-2: #A98467;
+  --danger: #B85C50;
+  --paper: #FBFAF3;
+  --surface-tint: #E2E7D8;
+  --surface-tint-strong: #D3DBC4;
+  --rule-line: rgba(74, 84, 62, 0.10);
+  --on-accent: #FFFFFF;
+  --shadow: 0 1px 2px rgba(58, 54, 40, 0.06), 0 6px 20px rgba(58, 54, 40, 0.09);
   color: var(--text);
   background: var(--bg);
   font-family: Lexend, Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 :root[data-theme="dark"] {
-  --bg: #101216;
-  --surface: #181B21;
-  --surface-raised: #20242C;
-  --text: #E8EAEE;
-  --text-soft: #98A2B3;
-  --border: #2C313A;
-  --accent: #7C93F2;
-  --accent-soft: rgba(124, 147, 242, 0.16);
-  --danger: #E06C6C;
-  --paper: #181B21;
-  --surface-tint: #1C2130;
-  --surface-tint-strong: #232A3E;
-  --rule-line: rgba(232, 234, 238, 0.07);
+  --bg: #1E1D18;
+  --surface: #26251F;
+  --surface-raised: #2E2D26;
+  --text: #EAE6DA;
+  --text-soft: #A29B8A;
+  --border: #3C3A2F;
+  --accent: #9DB48F;
+  --accent-soft: rgba(157, 180, 143, 0.16);
+  --accent-2: #C4A183;
+  --danger: #D08376;
+  --paper: #26251F;
+  --surface-tint: #2A2E24;
+  --surface-tint-strong: #343A2C;
+  --rule-line: rgba(234, 230, 218, 0.07);
+  --on-accent: #20241B;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 20px rgba(0, 0, 0, 0.35);
 }
 
@@ -152,7 +156,7 @@ input {
 
 .tool-button.is-active {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .tool-button svg {
@@ -172,15 +176,26 @@ input {
   display: inline;
 }
 
-.pen-swatch {
-  position: absolute;
-  right: 6px;
-  bottom: 6px;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: currentColor;
-  outline: 1.5px solid var(--surface-raised);
+.tool-pen svg {
+  width: 20px;
+  height: 26px;
+}
+
+.pen-tip {
+  fill: var(--tip-color, currentColor);
+}
+
+.pager-divider {
+  width: 1px;
+  height: 20px;
+  margin: 0 4px;
+  background: var(--border);
+}
+
+.zoom-label {
+  min-width: 46px;
+  font-size: 12px !important;
+  color: var(--text-soft);
 }
 
 /* ---------- Side panel (pages + folders) ---------- */
@@ -286,7 +301,7 @@ input {
 .side-page-row.is-active,
 .side-note-row.is-active {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .side-folder-row {
@@ -437,7 +452,7 @@ input {
 
 .image-q.is-on {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .image-resize {
@@ -530,41 +545,47 @@ input {
 .option-pill.is-active {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 /* ---------- Stage / paper ---------- */
 
 .stage-wrap {
   position: relative;
-  overflow: hidden;
-  display: flex;
-  justify-content: center;
+  overflow: auto;
   background: var(--bg);
 }
 
-.ink-stage {
+.stage-sizer {
   position: relative;
-  width: 100%;
-  height: 100%;
+  margin: 0 auto;
+}
+
+.ink-stage {
+  position: absolute;
+  top: 0;
+  left: 0;
   overflow: hidden;
   touch-action: none;
-  cursor: crosshair;
+  transform-origin: 0 0;
   background: var(--paper);
-}
-
-.stage-wrap.size-medium .ink-stage {
-  max-width: 860px;
   border-left: 1px solid var(--border);
   border-right: 1px solid var(--border);
   box-shadow: var(--shadow);
 }
 
-.stage-wrap.size-narrow .ink-stage {
-  max-width: 640px;
-  border-left: 1px solid var(--border);
-  border-right: 1px solid var(--border);
-  box-shadow: var(--shadow);
+/* Tool-aware cursors: a plain dot while inking, contextual elsewhere. */
+.ink-stage[data-cursor="pen"],
+.ink-stage[data-cursor="highlighter"] {
+  cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14'><circle cx='7' cy='7' r='3.2' fill='%23787264'/></svg>") 7 7, crosshair;
+}
+
+.ink-stage[data-cursor="eraser"] {
+  cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='22' height='22'><circle cx='11' cy='11' r='9' fill='none' stroke='%23787264' stroke-width='1.6'/></svg>") 11 11, cell;
+}
+
+.ink-stage[data-cursor="text"] {
+  cursor: text;
 }
 
 .ink-stage.bg-ruled {
@@ -631,7 +652,7 @@ input {
 /* ---------- Page pager ---------- */
 
 .page-pager {
-  position: absolute;
+  position: fixed;
   left: 14px;
   bottom: 14px;
   display: flex;
@@ -775,7 +796,7 @@ input {
 
 .line-pin-button:hover {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .line-delete-button {
@@ -786,7 +807,7 @@ input {
 .line-delete-button:hover {
   background: var(--danger);
   border-color: var(--danger);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .line-delete-button svg {
@@ -1117,7 +1138,7 @@ input {
   border: 0;
   border-radius: 12px;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
@@ -1197,7 +1218,7 @@ input {
 
 .home-card-remove:hover {
   background: var(--danger);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 /* ---------- Walkthrough tour ---------- */
@@ -1273,7 +1294,7 @@ input {
 .tour-next {
   border: 0;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-weight: 600;
 }
 
