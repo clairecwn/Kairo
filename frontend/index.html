@@ -83,43 +83,54 @@
       <div class="popover" id="page-popover" hidden>
         <div class="popover-label">Paper</div>
         <div class="popover-row" data-backgrounds></div>
-        <div class="popover-label">Width</div>
+        <div class="popover-label">Page size</div>
         <div class="popover-row" data-page-sizes></div>
         <div class="popover-label">History compaction</div>
         <div class="popover-row" data-compact-modes></div>
       </div>
+      <div class="popover" id="color-popover" hidden>
+        <div class="popover-row" data-label-colors></div>
+      </div>
 
-      <aside class="side-panel" hidden aria-label="Pages and folders">
-        <div class="side-section">
-          <div class="side-heading">Pages
-            <button type="button" class="side-add" data-side="add-page" title="New page" aria-label="New page">＋</button>
+      <div class="workspace-row">
+        <aside class="side-panel" hidden aria-label="Pages and files">
+          <div class="side-section">
+            <div class="side-heading">Pages
+              <button type="button" class="side-add" data-side="add-page" title="New page" aria-label="New page">＋</button>
+            </div>
+            <div class="side-pages"></div>
           </div>
-          <div class="side-pages"></div>
-        </div>
-        <div class="side-section side-grow">
-          <div class="side-heading">Notebook
-            <button type="button" class="side-add" data-side="add-folder" title="New folder" aria-label="New folder">
-              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5.5A1.5 1.5 0 014.5 4h3l1.6 2H15.5A1.5 1.5 0 0117 7.5v7A1.5 1.5 0 0115.5 16h-11A1.5 1.5 0 013 14.5v-9zM10 9v4m-2-2h4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
-            <button type="button" class="side-add" data-side="add-note" title="New note" aria-label="New note">＋</button>
+          <div class="side-section side-grow">
+            <div class="side-heading">Files
+              <button type="button" class="side-add" data-side="add-folder" title="New file" aria-label="New file">
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5.5A1.5 1.5 0 014.5 4h3l1.6 2H15.5A1.5 1.5 0 0117 7.5v7A1.5 1.5 0 0115.5 16h-11A1.5 1.5 0 013 14.5v-9zM10 9v4m-2-2h4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <button type="button" class="side-add" data-side="add-note" title="New notebook" aria-label="New notebook">＋</button>
+            </div>
+            <div class="side-tree" data-drop-root></div>
           </div>
-          <div class="side-tree"></div>
-        </div>
-      </aside>
+        </aside>
 
-      <section class="stage-wrap">
-        <div class="stage-sizer">
-          <section class="ink-stage" aria-label="Handwriting surface">
-            <canvas id="committed-canvas" class="ink-canvas" aria-hidden="true"></canvas>
-            <canvas id="wet-canvas" class="ink-canvas" aria-label="Write solution"></canvas>
-          </section>
-        </div>
-      </section>
+        <section class="stage-wrap">
+          <div class="stage-sizer">
+            <section class="ink-stage" aria-label="Handwriting surface">
+              <canvas id="committed-canvas" class="ink-canvas" aria-hidden="true"></canvas>
+              <canvas id="wet-canvas" class="ink-canvas" aria-label="Write solution"></canvas>
+            </section>
+          </div>
+        </section>
+
+        <aside class="pin-rail" aria-label="Pinned references"></aside>
+      </div>
+
       <div class="page-pager" role="navigation" aria-label="Pages and zoom">
         <button type="button" data-page="prev" title="Previous page" aria-label="Previous page">‹</button>
         <span class="page-pager-label">1 / 1</span>
         <button type="button" data-page="next" title="Next page" aria-label="Next page">›</button>
         <button type="button" data-page="add" title="New page" aria-label="New page">＋</button>
+        <button type="button" data-page="delete" title="Delete this page" aria-label="Delete this page">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 6h12M8 6V4.5A1.5 1.5 0 019.5 3h1A1.5 1.5 0 0112 4.5V6m2.5 0l-.7 9a1.5 1.5 0 01-1.5 1.4H7.7a1.5 1.5 0 01-1.5-1.4l-.7-9M8.2 9v5m3.6-5v5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
         <span class="pager-divider"></span>
         <button type="button" data-zoom="out" title="Zoom out (Ctrl+scroll)" aria-label="Zoom out">−</button>
         <button type="button" class="zoom-label" data-zoom="reset" title="Reset zoom" aria-label="Reset zoom">100%</button>
@@ -130,19 +141,15 @@
     <section class="home-screen" hidden>
       <div class="home-inner">
         <div class="home-hero">
-          <div class="home-hero-copy">
-            <h1 class="home-title">Welcome to <span>Kairo</span></h1>
-            <p class="home-subtitle">The student notepad that keeps your whole solution on one screen — the question, every step you've written, and your key results. No scrolling, no lost train of thought.</p>
-            <button class="home-new" type="button">＋ New note</button>
-          </div>
-          <div class="home-hero-cards" aria-hidden="true">
-            <div class="home-feature"><span class="home-feature-icon">✍️</span><strong>Ink stays put</strong><span>No timers, no jumping — write and think at your own pace.</span></div>
-            <div class="home-feature"><span class="home-feature-icon">📌</span><strong>Pin key results</strong><span>Keep formulas and substitutions always in view.</span></div>
-            <div class="home-feature"><span class="home-feature-icon">🗂️</span><strong>Notes & folders</strong><span>Pages, folders and sub-folders — organized like your binder.</span></div>
-          </div>
+          <div class="home-mark" aria-hidden="true">κ</div>
+          <h1 class="home-title">Kairo</h1>
+          <p class="home-subtitle">A notepad built for working through problems.</p>
+          <button class="home-new" type="button">Get started</button>
         </div>
-        <div class="home-grid-heading">Your notes</div>
-        <div class="home-grid" aria-label="Your notes"></div>
+        <div class="home-grid-wrap">
+          <div class="home-grid-heading">Your notebooks</div>
+          <div class="home-grid" aria-label="Your notebooks"></div>
+        </div>
       </div>
     </section>
 

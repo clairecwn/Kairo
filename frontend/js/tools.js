@@ -8,7 +8,16 @@ export const FONTS = [
 ];
 
 export const BACKGROUNDS = ["plain", "ruled", "grid", "dots"];
-export const PAGE_SIZES = ["full", "medium", "narrow"];
+
+// Real paper proportions (CSS px @96dpi) so the page always reads as a
+// portrait sheet, never a wide landscape strip, at any zoom level.
+export const PAGE_SIZES = [
+  { id: "full", label: "Full" },
+  { id: "a4", label: "A4", width: 794, height: 1123 },
+  { id: "a3", label: "A3", width: 1123, height: 1587 },
+  { id: "letter", label: "Letter", width: 816, height: 1056 },
+  { id: "legal", label: "Legal", width: 816, height: 1344 }
+];
 
 export function installTools() {
   const saved = readSaved();

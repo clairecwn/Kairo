@@ -1,6 +1,15 @@
 const INDEX_KEY = "kairo.notes";
 const PAGE_PREFIX = "kairo.page.";
 
+export const LABEL_COLORS = [
+  { id: "sage", value: "#7C9A72" },
+  { id: "clay", value: "#B08463" },
+  { id: "sky", value: "#7C97B0" },
+  { id: "plum", value: "#9A82AC" },
+  { id: "gold", value: "#C7A253" },
+  { id: "rose", value: "#B87E7E" }
+];
+
 export function installWorkspace({ serializePage, loadPage, clearPage }) {
   const index = readIndex();
   const state = {
@@ -33,8 +42,8 @@ export function installWorkspace({ serializePage, loadPage, clearPage }) {
     }
   }
 
-  function createFolder(parentId = null, name = "New folder") {
-    const folder = { id: `folder-${Date.now().toString(36)}-${state.folders.length}`, name, parentId };
+  function createFolder(parentId = null, name = "New file") {
+    const folder = { id: `folder-${Date.now().toString(36)}-${state.folders.length}`, name, parentId, color: null };
     state.folders.push(folder);
     writeIndex();
     return folder;
@@ -43,7 +52,31 @@ export function installWorkspace({ serializePage, loadPage, clearPage }) {
   function renameFolder(folderId, name) {
     const folder = state.folders.find((candidate) => candidate.id === folderId);
     if (folder) {
-      folder.name = name.trim() || "Untitled folder";
+      folder.name = name.trim() || "Untitled file";
+      writeIndex();
+    }
+  }
+
+  function setFolderColor(folderId, color) {
+    const folder = state.folders.find((candidate) => candidate.id === folderId);
+    if (folder) {
+      folder.color = color;
+      writeIndex();
+    }
+  }
+
+  function setNoteColor(noteId, color) {
+    const note = state.notes.find((candidate) => candidate.id === noteId);
+    if (note) {
+      note.color = color;
+      writeIndex();
+    }
+  }
+
+  function moveNoteToFolder(noteId, folderId) {
+    const note = state.notes.find((candidate) => candidate.id === noteId);
+    if (note) {
+      note.folderId = folderId;
       writeIndex();
     }
   }
@@ -77,6 +110,7 @@ export function installWorkspace({ serializePage, loadPage, clearPage }) {
       id: `note-${Date.now().toString(36)}`,
       title,
       folderId,
+      color: null,
       pageIds: [`page-${Date.now().toString(36)}`],
       updatedAt: Date.now()
     };
@@ -142,6 +176,28 @@ export function installWorkspace({ serializePage, loadPage, clearPage }) {
     note.updatedAt = Date.now();
     writeIndex();
     loadCurrentPage();
+  }
+
+  function deletePage(indexToDelete = state.pageIndex) {
+    const note = currentNote();
+    if (!note || note.pageIds.length <= 1) {
+      return false;
+    }
+    const [removedId] = note.pageIds.splice(indexToDelete, 1);
+    try {
+      window.localStorage.removeItem(PAGE_PREFIX + removedId);
+    } catch {
+      // Ignore storage errors on cleanup.
+    }
+    if (state.pageIndex >= note.pageIds.length) {
+      state.pageIndex = note.pageIds.length - 1;
+    } else if (indexToDelete < state.pageIndex) {
+      state.pageIndex -= 1;
+    }
+    note.updatedAt = Date.now();
+    writeIndex();
+    loadCurrentPage();
+    return true;
   }
 
   function switchPage(delta) {
@@ -224,8 +280,12 @@ export function installWorkspace({ serializePage, loadPage, clearPage }) {
     createFolder,
     renameFolder,
     deleteFolder,
+    setFolderColor,
+    setNoteColor,
+    moveNoteToFolder,
     pageCount,
     addPage,
+    deletePage,
     switchPage,
     switchToPage,
     markDirty,
