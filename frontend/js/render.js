@@ -22,7 +22,13 @@ export function resolveStrokeColor(color) {
   }
   const entry = PEN_COLORS.find((candidate) => candidate.id === color);
   if (!entry) {
-    return typeof color === "string" && color.startsWith("#") ? color : "#35322B";
+    // Unknown/legacy value: fall back to the theme-correct default ink color
+    // rather than a fixed dark hex, or "auto" ink would render invisibly
+    // dark-on-dark whenever a stroke's color doesn't match a known id.
+    const autoEntry = PEN_COLORS[0];
+    return typeof color === "string" && color.startsWith("#")
+      ? color
+      : (isDarkTheme() ? autoEntry.dark : autoEntry.light);
   }
   if (entry.id === "auto") {
     return isDarkTheme() ? entry.dark : entry.light;

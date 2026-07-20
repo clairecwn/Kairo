@@ -13,6 +13,7 @@ let getLines = null;
 let getStrokes = null;
 let getLineDy = () => 0;
 let getCompactMode = () => "auto";
+let getViewportTop = () => 0;
 let penPosition = null;
 let penIsDown = false;
 let queuedLayout = false;
@@ -33,6 +34,9 @@ export function installLayout(options) {
   }
   if (options.getCompactMode) {
     getCompactMode = options.getCompactMode;
+  }
+  if (options.getViewportTop) {
+    getViewportTop = options.getViewportTop;
   }
 
   historyLayer = document.createElement("div");
@@ -253,15 +257,18 @@ function getLayoutTargets(lines) {
   }
   void ceilingBottom;
 
-  // Compaction engages ONLY when the writer has genuinely run out of room:
-  // either the stack overflows the top, or a NEW line was started above older
-  // ink (the hop-up into freed space). Then older lines shrink (never below
-  // 50%) and re-stack above the pen. Re-entering an old line to edit it never
-  // triggers this — only writing a brand-new line can.
+  // Compaction engages ONLY when the writer has genuinely run out of VISIBLE
+  // room: either the stack overflows the top of the current viewport (not
+  // the top of the whole page — a tall A4/A3 sheet must still compact within
+  // what's on screen, matching the "never scroll" promise), or a NEW line was
+  // started above older ink (the hop-up into freed space). Then older lines
+  // shrink (never below 50%) and re-stack above the pen. Re-entering an old
+  // line to edit it never triggers this — only writing a brand-new line can.
+  const topMargin = getViewportTop() + TOP_MARGIN;
   const anchorTop = targets[0].y;
   const anchorIsNewest = anchorLine === ordered[ordered.length - 1];
   const hoppedAbove = anchorIsNewest && placed.some((item) => item.y > anchorTop - 4);
-  if (placed.length > 0 && (placed[0].y < TOP_MARGIN || hoppedAbove)) {
+  if (placed.length > 0 && (placed[0].y < topMargin || hoppedAbove)) {
     for (const item of placed) {
       if (!referenceLineIds.has(item.line.id)) {
         item.scale = Math.max(MIN_SCALE, 1 - item.age * 0.06);
@@ -269,9 +276,11 @@ function getLayoutTargets(lines) {
       }
     }
     const anchor = targets[0].y - 6;
-    const available = anchor - TOP_MARGIN;
+    const available = anchor - topMargin;
     const needed = placed.reduce((sum, item) => sum + item.height + item.gap, 0);
-    const factor = needed > 0 ? Math.max(0.55, available / needed) : 1;
+    // Never scale UP — only squeeze further if the age-based shrink still
+    // doesn't fit; if there's slack, lines just keep their natural scale.
+    const factor = needed > 0 ? Math.min(1, Math.max(0.55, available / needed)) : 1;
     let bottom = anchor;
     for (let index = placed.length - 1; index >= 0; index -= 1) {
       const item = placed[index];
@@ -283,9 +292,9 @@ function getLayoutTargets(lines) {
       item.y = bottom - item.gap - item.height;
       bottom = item.y;
     }
-    // Final clamp: stagger anything still above the top edge.
+    // Final clamp: stagger anything still above the visible top edge.
     for (let index = 0; index < placed.length; index += 1) {
-      placed[index].y = Math.max(placed[index].y, TOP_MARGIN + index * 3);
+      placed[index].y = Math.max(placed[index].y, topMargin + index * 3);
     }
   }
 

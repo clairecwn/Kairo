@@ -70,6 +70,7 @@ input {
   height: 100vh;
   display: grid;
   grid-template-rows: 60px 1fr;
+  grid-template-columns: minmax(0, 1fr);
   overflow: hidden;
 }
 
@@ -204,6 +205,7 @@ input {
   display: flex;
   height: 100%;
   min-height: 0;
+  min-width: 0;
 }
 
 .side-panel {
