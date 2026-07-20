@@ -45,6 +45,7 @@ let renderHomeGrid = () => {};
 // A4's own portrait ratio — used for "Full" so the page reads as a real sheet
 // of paper (tall) instead of stretching to match a wide landscape window.
 const PORTRAIT_RATIO = 1123 / 794;
+let cachedFullWidth = null;
 
 function clampZoom(value) {
   return Math.min(2, Math.max(0.5, Number.isFinite(value) ? value : 1));
@@ -316,7 +317,13 @@ installImageIntake();
 installHomeScreen();
 installServiceWorker();
 applyView();
-window.addEventListener("resize", applyView);
+window.addEventListener("resize", () => {
+  // A genuine window resize is the ONLY thing allowed to change the "Full"
+  // page's width — sidebar toggles, zoom, and tool changes must not, or the
+  // page would resize underneath ink the user just wrote.
+  cachedFullWidth = null;
+  applyView();
+});
 
 // Debug/inspection hook (used by automated tests).
 window.getLines = getLines;
@@ -324,12 +331,15 @@ window.getLines = getLines;
 /* ---------- View: page size, zoom, scroll ---------- */
 
 function applyView() {
-  const wrapWidth = Math.max(200, stageWrap.clientWidth - 48);
   const sizeEntry = PAGE_SIZES.find((size) => size.id === tools.state.pageSize) || PAGE_SIZES[0];
   let width;
   let height;
   if (sizeEntry.id === "full") {
-    width = Math.max(320, Math.min(900, wrapWidth));
+    if (cachedFullWidth === null) {
+      const wrapWidth = Math.max(200, stageWrap.clientWidth - 48);
+      cachedFullWidth = Math.max(320, Math.min(900, wrapWidth));
+    }
+    width = cachedFullWidth;
     height = width * PORTRAIT_RATIO;
   } else {
     width = sizeEntry.width;
