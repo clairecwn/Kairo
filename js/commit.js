@@ -185,16 +185,44 @@ export function installCommitController(options) {
       && point.y <= transform.y + height;
   }
 
+  function handlePenLift(event) {
+    // Pen lifts only count on the writing surface, not on cards/buttons/text UI.
+    if (event.target.closest?.(".pin-column, .line-action-bar, .selection-handle, .pin-overlay, .text-box, .popover, .page-pager")) {
+      return;
+    }
+    onPenLift(event);
+  }
+
   stage.addEventListener("pointerdown", handlePointerDown, true);
-  stage.addEventListener("pointerup", onPenLift);
+  stage.addEventListener("pointerup", handlePenLift);
+
+  function serialize() {
+    return {
+      openLineId: state.openLineId,
+      committedLineIds: [...state.committedLineIds],
+      lineDy: [...state.lineDy.entries()],
+      docCursor: state.docCursor
+    };
+  }
+
+  function load(data) {
+    state.openLineId = data?.openLineId || null;
+    state.committedLineIds = new Set(data?.committedLineIds || []);
+    state.lineDy = new Map(data?.lineDy || []);
+    state.docCursor = data?.docCursor || 0;
+    state.reentry = null;
+    syncLayoutState();
+  }
 
   return {
     addStroke: addCommittedStroke,
     commitLine,
     getLineDy,
+    serialize,
+    load,
     destroy() {
       stage.removeEventListener("pointerdown", handlePointerDown, true);
-      stage.removeEventListener("pointerup", onPenLift);
+      stage.removeEventListener("pointerup", handlePenLift);
     }
   };
 }

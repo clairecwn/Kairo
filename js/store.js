@@ -30,6 +30,31 @@ export function restoreStroke(record) {
   strokes.push(record);
 }
 
+export function serializeStrokes() {
+  return getStrokes();
+}
+
+export function loadStrokes(records) {
+  strokes.length = 0;
+  let maxId = 0;
+  for (const record of records || []) {
+    strokes.push({
+      id: record.id,
+      points: record.points.map((point) => [...point]),
+      lineId: record.lineId ?? null,
+      color: record.color || "auto",
+      size: record.size || 5.8,
+      penType: record.penType || "pen"
+    });
+    const numeric = Number(String(record.id).replace("stroke-", ""));
+    if (Number.isFinite(numeric)) {
+      maxId = Math.max(maxId, numeric);
+    }
+  }
+  // Keep the counter monotonic across page loads so ids never collide.
+  nextStrokeId = Math.max(nextStrokeId, maxId + 1);
+}
+
 export function getStrokes() {
   return strokes.map((stroke) => ({
     id: stroke.id,
