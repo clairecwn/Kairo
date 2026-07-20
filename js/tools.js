@@ -21,7 +21,8 @@ export function installTools() {
     textColor: saved.textColor || "auto",
     theme: saved.theme || "light",
     background: saved.background || "ruled",
-    pageSize: saved.pageSize || "full"
+    pageSize: saved.pageSize || "full",
+    compact: saved.compact || "auto"
   };
   const listeners = new Set();
 
@@ -98,7 +99,8 @@ function persist(state) {
       textColor: state.textColor,
       theme: state.theme,
       background: state.background,
-      pageSize: state.pageSize
+      pageSize: state.pageSize,
+      compact: state.compact
     }));
   } catch {
     // Storage unavailable (private mode): run with in-memory settings.

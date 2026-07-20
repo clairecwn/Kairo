@@ -1,6 +1,7 @@
 import { createInkSurface } from "./ink.js";
 import { installAi } from "./ai.js";
 import { installCommitController } from "./commit.js";
+import { installImages } from "./images.js";
 import { installLayout, scheduleLayout } from "./layout.js";
 import { installPins } from "./pins.js";
 import { installText } from "./text.js";
@@ -33,17 +34,17 @@ const committedCanvas = document.querySelector("#committed-canvas");
 const wetCanvas = document.querySelector("#wet-canvas");
 const inkStage = document.querySelector(".ink-stage");
 const stageWrap = document.querySelector(".stage-wrap");
-const questionPanel = document.querySelector(".question-panel");
-const questionBand = document.querySelector(".question-band");
 const homeScreen = document.querySelector(".home-screen");
 const noteTitleInput = document.querySelector(".note-title");
+const sidePanel = document.querySelector(".side-panel");
 
 const tools = installTools();
 
 const layout = installLayout({
   stage: inkStage,
   getLines,
-  getStrokes
+  getStrokes,
+  getCompactMode: () => tools.state.compact
 });
 const pins = installPins({
   stage: inkStage,
@@ -87,9 +88,36 @@ const commit = installCommitController({
 });
 layout.setLineDyProvider(commit.getLineDy);
 
-const text = installText({ stage: inkStage, tools });
+const text = installText({
+  stage: inkStage,
+  tools,
+  onChanged: () => {
+    recomputeQuestion();
+    workspace.markDirty();
+  }
+});
 
-const question = installQuestionBand(questionBand);
+const images = installImages({
+  stage: inkStage,
+  onChange: (questionImage, dirty) => {
+    recomputeQuestion();
+    if (dirty) {
+      workspace.markDirty();
+    }
+  }
+});
+
+// The app decides what the "question" is: a Q-flagged image wins, otherwise
+// the first typed text that reads like a question ("...?", "Q1.", "Question 2:").
+function recomputeQuestion() {
+  const questionImage = images.getQuestion();
+  if (questionImage) {
+    pins.setQuestion({ type: "image", src: questionImage.src });
+    return;
+  }
+  const questionText = text.getQuestionText();
+  pins.setQuestion(questionText ? { type: "text", text: questionText } : null);
+}
 
 const workspace = installWorkspace({
   serializePage: () => ({
@@ -98,7 +126,7 @@ const workspace = installWorkspace({
     commit: commit.serialize(),
     pins: pins.serializePins(),
     texts: text.serialize(),
-    question: question.get()
+    images: images.serialize()
   }),
   loadPage: (payload) => {
     loadStrokes(payload.strokes);
@@ -106,9 +134,10 @@ const workspace = installWorkspace({
     commit.load(payload.commit);
     pins.loadPins(payload.pins);
     text.load(payload.texts);
-    question.set(payload.question || null);
+    images.load(payload.images);
+    recomputeQuestion();
     layout.scheduleLayout();
-    updatePager();
+    refreshWorkspaceUi();
   },
   clearPage: () => {
     loadStrokes([]);
@@ -116,9 +145,10 @@ const workspace = installWorkspace({
     commit.load(null);
     pins.loadPins([]);
     text.load([]);
-    question.set(null);
+    images.load([]);
+    recomputeQuestion();
     layout.scheduleLayout();
-    updatePager();
+    refreshWorkspaceUi();
   }
 });
 
@@ -239,11 +269,201 @@ function eraseAt(point) {
 
 installToolbar();
 installPager();
+installSidebar();
+installImageIntake();
 installHomeScreen();
 installServiceWorker();
 
 // Debug/inspection hook (used by automated tests).
 window.getLines = getLines;
+
+/* ---------- Image intake (upload + paste straight onto the page) ---------- */
+
+function installImageIntake() {
+  const input = document.querySelector("#image-input");
+  input?.addEventListener("change", () => {
+    const file = input.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      readImageFile(file);
+      input.value = "";
+    }
+  });
+
+  window.addEventListener("paste", (event) => {
+    if (event.target.closest?.(".text-box-input, .note-title, .pin-card-caption")) {
+      return;
+    }
+    const items = event.clipboardData?.items || [];
+    for (const item of items) {
+      if (item.type.startsWith("image/")) {
+        event.preventDefault();
+        readImageFile(item.getAsFile());
+        return;
+      }
+    }
+  });
+
+  function readImageFile(file) {
+    if (!file) {
+      return;
+    }
+    const reader = new FileReader();
+    reader.addEventListener("load", () => {
+      const dataUrl = String(reader.result || "");
+      if (dataUrl) {
+        images.insert(dataUrl);
+      }
+    });
+    reader.readAsDataURL(file);
+  }
+}
+
+/* ---------- Side panel: pages + folders ---------- */
+
+function installSidebar() {
+  document.querySelector("[data-action='sidebar']").addEventListener("click", () => {
+    sidePanel.hidden = !sidePanel.hidden;
+    if (!sidePanel.hidden) {
+      renderSidebar();
+    }
+  });
+  sidePanel.querySelector("[data-side='add-page']").addEventListener("click", () => {
+    workspace.addPage();
+    refreshWorkspaceUi();
+  });
+  sidePanel.querySelector("[data-side='add-note']").addEventListener("click", () => {
+    const note = workspace.createNote();
+    workspace.openNote(note.id);
+    noteTitleInput.value = note.title;
+    refreshWorkspaceUi();
+  });
+  sidePanel.querySelector("[data-side='add-folder']").addEventListener("click", () => {
+    workspace.createFolder(null);
+    renderSidebar();
+  });
+}
+
+function renderSidebar() {
+  if (sidePanel.hidden) {
+    return;
+  }
+  const pagesEl = sidePanel.querySelector(".side-pages");
+  pagesEl.replaceChildren();
+  const count = workspace.pageCount();
+  for (let index = 0; index < count; index += 1) {
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "side-page-row";
+    row.classList.toggle("is-active", index === workspace.pageIndex);
+    row.textContent = `Page ${index + 1}`;
+    row.addEventListener("click", () => {
+      workspace.switchToPage(index);
+      refreshWorkspaceUi();
+    });
+    pagesEl.appendChild(row);
+  }
+
+  const tree = sidePanel.querySelector(".side-tree");
+  tree.replaceChildren();
+  renderFolderChildren(tree, null, 0);
+}
+
+function renderFolderChildren(container, parentId, depth) {
+  for (const folder of workspace.folders.filter((f) => (f.parentId || null) === parentId)) {
+    container.appendChild(renderFolderRow(folder, depth));
+    renderFolderChildren(container, folder.id, depth + 1);
+  }
+  for (const note of workspace.notes.filter((n) => (n.folderId || null) === parentId)) {
+    container.appendChild(renderNoteRow(note, depth));
+  }
+}
+
+function renderFolderRow(folder, depth) {
+  const row = document.createElement("div");
+  row.className = "side-folder-row";
+  row.style.paddingLeft = `${10 + depth * 16}px`;
+
+  const name = document.createElement("span");
+  name.className = "side-folder-name";
+  name.textContent = folder.name;
+  name.title = "Double-click to rename";
+  name.addEventListener("dblclick", () => {
+    name.contentEditable = "true";
+    name.focus();
+    document.getSelection()?.selectAllChildren(name);
+  });
+  name.addEventListener("blur", () => {
+    name.contentEditable = "false";
+    workspace.renameFolder(folder.id, name.textContent);
+    renderSidebar();
+  });
+  name.addEventListener("keydown", (event) => {
+    event.stopPropagation();
+    if (event.key === "Enter") {
+      event.preventDefault();
+      name.blur();
+    }
+  });
+
+  const addNote = sideIconButton("＋", "New note in folder", () => {
+    const note = workspace.createNote("Untitled note", folder.id);
+    workspace.openNote(note.id);
+    noteTitleInput.value = note.title;
+    refreshWorkspaceUi();
+  });
+  const addSub = sideIconButton("📁", "New sub-folder", () => {
+    workspace.createFolder(folder.id);
+    renderSidebar();
+  });
+  const del = sideIconButton("×", "Delete folder (contents move up)", () => {
+    workspace.deleteFolder(folder.id);
+    renderSidebar();
+  });
+
+  row.append(folderGlyph(), name, addNote, addSub, del);
+  return row;
+}
+
+function renderNoteRow(note, depth) {
+  const row = document.createElement("button");
+  row.type = "button";
+  row.className = "side-note-row";
+  row.classList.toggle("is-active", workspace.currentNote()?.id === note.id);
+  row.style.paddingLeft = `${14 + depth * 16}px`;
+  row.textContent = note.title;
+  row.addEventListener("click", () => {
+    workspace.openNote(note.id);
+    noteTitleInput.value = note.title;
+    refreshWorkspaceUi();
+  });
+  return row;
+}
+
+function folderGlyph() {
+  const glyph = document.createElement("span");
+  glyph.className = "side-folder-glyph";
+  glyph.textContent = "▸";
+  return glyph;
+}
+
+function sideIconButton(label, title, onClick) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "side-icon-button";
+  button.title = title;
+  button.setAttribute("aria-label", title);
+  button.textContent = label;
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    onClick();
+  });
+  return button;
+}
+
+function refreshWorkspaceUi() {
+  updatePager();
+  renderSidebar();
+}
 
 /* ---------- Home screen ---------- */
 
@@ -281,7 +501,7 @@ function installHomeScreen() {
     workspace.openNote(noteId);
     noteTitleInput.value = workspace.currentNote()?.title || "Untitled note";
     homeScreen.hidden = true;
-    updatePager();
+    refreshWorkspaceUi();
     if (!window.localStorage.getItem("kairo.tourDone")) {
       window.setTimeout(() => window.dispatchEvent(new Event("kairo:start-tour")), 400);
     }
@@ -303,6 +523,7 @@ function installHomeScreen() {
 
   noteTitleInput.addEventListener("change", () => {
     workspace.renameNote(noteTitleInput.value);
+    renderSidebar();
   });
   noteTitleInput.addEventListener("keydown", (event) => {
     event.stopPropagation();
@@ -320,15 +541,15 @@ function installHomeScreen() {
 function installPager() {
   document.querySelector("[data-page='prev']").addEventListener("click", () => {
     workspace.switchPage(-1);
-    updatePager();
+    refreshWorkspaceUi();
   });
   document.querySelector("[data-page='next']").addEventListener("click", () => {
     workspace.switchPage(1);
-    updatePager();
+    refreshWorkspaceUi();
   });
   document.querySelector("[data-page='add']").addEventListener("click", () => {
     workspace.addPage();
-    updatePager();
+    refreshWorkspaceUi();
   });
   updatePager();
 }
@@ -401,6 +622,15 @@ function installToolbar() {
   buildSwatches(document.querySelector("[data-text-colors]"), PEN_COLORS, () => tools.state.textColor, (id) => tools.set({ textColor: id }));
   buildPills(document.querySelector("[data-backgrounds]"), BACKGROUNDS.map((id) => ({ id, label: id[0].toUpperCase() + id.slice(1) })), () => tools.state.background, (id) => tools.set({ background: id }));
   buildPills(document.querySelector("[data-page-sizes]"), PAGE_SIZES.map((id) => ({ id, label: id[0].toUpperCase() + id.slice(1) })), () => tools.state.pageSize, (id) => tools.set({ pageSize: id }));
+  buildPills(
+    document.querySelector("[data-compact-modes]"),
+    [{ id: "auto", label: "Auto (when full)" }, { id: "off", label: "Never" }],
+    () => tools.state.compact,
+    (id) => {
+      tools.set({ compact: id });
+      scheduleLayout();
+    }
+  );
 
   document.addEventListener("pointerdown", (event) => {
     if (!event.target.closest(".popover, .tool-button, .chip-button")) {
@@ -497,85 +727,14 @@ function buildPills(container, options, getActive, onPick) {
   }
 }
 
-/* ---------- Question panel ---------- */
-
-function installQuestionBand(band) {
-  const image = band.querySelector(".question-image");
-  const emptyLabel = band.querySelector(".question-empty");
-  const preview = band.querySelector(".question-preview");
-  const input = band.querySelector("#question-input");
-  const collapse = band.querySelector(".question-collapse");
-  let currentSrc = null;
-
-  input?.addEventListener("change", () => {
-    const file = input.files?.[0];
-    if (!file || !file.type.startsWith("image/")) {
-      return;
-    }
-    readImageFile(file);
-  });
-
-  window.addEventListener("paste", (event) => {
-    const items = event.clipboardData?.items || [];
-    for (const item of items) {
-      if (item.type.startsWith("image/")) {
-        event.preventDefault();
-        readImageFile(item.getAsFile());
-        return;
-      }
-    }
-  });
-
-  preview?.addEventListener("click", () => {
-    if (currentSrc) {
-      pins.showImageOverlay(currentSrc, "Question");
-    }
-  });
-
-  collapse?.addEventListener("click", () => {
-    questionPanel.classList.toggle("is-collapsed");
-  });
-
-  function readImageFile(file) {
-    if (!file) {
-      return;
-    }
-    const reader = new FileReader();
-    reader.addEventListener("load", () => {
-      const dataUrl = String(reader.result || "");
-      if (dataUrl) {
-        set(dataUrl);
-        workspace.markDirty();
-      }
-    });
-    reader.readAsDataURL(file);
-  }
-
-  function set(src) {
-    currentSrc = src;
-    if (src) {
-      image.src = src;
-      image.hidden = false;
-      emptyLabel.hidden = true;
-      questionPanel.classList.remove("is-collapsed");
-    } else {
-      image.removeAttribute("src");
-      image.hidden = true;
-      emptyLabel.hidden = false;
-    }
-  }
-
-  return { set, get: () => currentSrc };
-}
-
 /* ---------- Walkthrough tour ---------- */
 
 function installTour() {
   const steps = [
     {
-      target: ".question-panel",
-      title: "Your question stays pinned",
-      body: "Upload or paste (Ctrl+V) the problem. Tap it any time to read it full-size, or collapse it when you know it by heart."
+      target: ".ink-stage",
+      title: "Drop your question right on the page",
+      body: "Paste (Ctrl+V) or insert your question, practice paper, or tutorial. Kairo spots the question — image or typed — and keeps it one tap away in the right rail while you work."
     },
     {
       target: ".ink-stage",
