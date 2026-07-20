@@ -1,12 +1,12 @@
 import { getStroke } from "https://esm.sh/perfect-freehand@1.2.2";
 
 export const PEN_COLORS = [
-  { id: "auto", label: "Ink", light: "#2A2A26", dark: "#ECE9E2" },
-  { id: "clay", label: "Clay", value: "#C15F3C" },
-  { id: "blue", label: "Blue", value: "#3B6EA5" },
-  { id: "green", label: "Green", value: "#4F7B58" },
-  { id: "purple", label: "Purple", value: "#7C5CBF" },
-  { id: "red", label: "Red", value: "#B4453E" }
+  { id: "auto", label: "Ink", light: "#35322B", dark: "#EAE6DA" },
+  { id: "brown", label: "Brown", value: "#8A6D4F" },
+  { id: "blue", label: "Blue", value: "#5B7B9E" },
+  { id: "green", label: "Green", value: "#6F8F66" },
+  { id: "purple", label: "Purple", value: "#8B7BB0" },
+  { id: "red", label: "Red", value: "#B06A5E" }
 ];
 
 export const PEN_SIZES = [
@@ -16,9 +16,13 @@ export const PEN_SIZES = [
 ];
 
 export function resolveStrokeColor(color) {
+  if (color === "clay") {
+    // Legacy strokes from the old palette.
+    return "#8A6D4F";
+  }
   const entry = PEN_COLORS.find((candidate) => candidate.id === color);
   if (!entry) {
-    return color || "#2A2A26";
+    return typeof color === "string" && color.startsWith("#") ? color : "#35322B";
   }
   if (entry.id === "auto") {
     return isDarkTheme() ? entry.dark : entry.light;

@@ -194,7 +194,6 @@ export function setReferenceLines(lineIds) {
 // pulled upward when the line below them needs the room — so ink never moves
 // while writing, and compaction happens at next-line starts.
 function getLayoutTargets(lines) {
-  const rect = stage.getBoundingClientRect();
   const ordered = lines.filter((line) => committedLineIds.has(line.id) || line.id === openLineId);
   if (ordered.length === 0) {
     return [];
@@ -241,23 +240,28 @@ function getLayoutTargets(lines) {
     return targets;
   }
 
-  // Auto mode, first pass: full scale, written positions. A line is only pulled
-  // up when it would actually overlap the line below (no manufactured gaps, no
-  // age shrink — nothing is "adjusted" while the page still has room).
+  // Auto mode, first pass: every committed line sits exactly where it was
+  // written — full scale, no constraints at all. Adjacent handwriting naturally
+  // overlaps a little (descenders, tight spacing); that is how paper looks.
   const placed = [];
   for (let index = committed.length - 1; index >= 0; index -= 1) {
     const line = committed[index];
     const age = committed.length - 1 - index;
     const height = Math.max(LINE_HEIGHT_FALLBACK * 0.6, line.bbox.height);
     const writtenY = line.bbox.minY - getLineDy(line.id);
-    const y = Math.min(writtenY, ceilingBottom - height);
-    placed.unshift({ line, age, scale: 1, x: line.bbox.minX, y, height, gap: 2 });
-    ceilingBottom = y;
+    placed.unshift({ line, age, scale: 1, x: line.bbox.minX, y: writtenY, height, gap: 2 });
   }
+  void ceilingBottom;
 
-  // Overflow pass: only when the page has genuinely run out of room, shrink
-  // older lines (never below 50%) and re-stack from the bottom anchor.
-  if (placed.length > 0 && placed[0].y < TOP_MARGIN) {
+  // Compaction engages ONLY when the writer has genuinely run out of room:
+  // either the stack overflows the top, or a NEW line was started above older
+  // ink (the hop-up into freed space). Then older lines shrink (never below
+  // 50%) and re-stack above the pen. Re-entering an old line to edit it never
+  // triggers this — only writing a brand-new line can.
+  const anchorTop = targets[0].y;
+  const anchorIsNewest = anchorLine === ordered[ordered.length - 1];
+  const hoppedAbove = anchorIsNewest && placed.some((item) => item.y > anchorTop - 4);
+  if (placed.length > 0 && (placed[0].y < TOP_MARGIN || hoppedAbove)) {
     for (const item of placed) {
       if (!referenceLineIds.has(item.line.id)) {
         item.scale = Math.max(MIN_SCALE, 1 - item.age * 0.06);
@@ -391,9 +395,10 @@ function handlePointerUp() {
 
 function pointFromEvent(event) {
   const rect = stage.getBoundingClientRect();
+  const scale = rect.width > 0 ? stage.offsetWidth / rect.width : 1;
   return {
-    x: event.clientX - rect.left,
-    y: event.clientY - rect.top
+    x: (event.clientX - rect.left) * scale,
+    y: (event.clientY - rect.top) * scale
   };
 }
 

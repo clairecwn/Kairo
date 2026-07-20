@@ -16,12 +16,14 @@ export function createInkSurface({ committedCanvas, wetCanvas, store, tools, onE
 
   function pointerPoint(event) {
     const rect = wetCanvas.getBoundingClientRect();
+    // Compensate for page zoom (CSS transform scale on the stage).
+    const scale = rect.width > 0 ? wetCanvas.offsetWidth / rect.width : 1;
     const pressure = event.pointerType === "mouse" || event.pressure === 0
       ? 0.5
       : event.pressure;
     return [
-      event.clientX - rect.left,
-      event.clientY - rect.top,
+      (event.clientX - rect.left) * scale,
+      (event.clientY - rect.top) * scale,
       pressure,
       event.timeStamp
     ];
@@ -140,16 +142,18 @@ function makeCanvasLayer(canvas, desynchronized) {
 }
 
 function resizeLayer(layer) {
-  const rect = layer.canvas.getBoundingClientRect();
+  // Layout (untransformed) size: stays stable under page zoom.
+  const logicalWidth = layer.canvas.offsetWidth;
+  const logicalHeight = layer.canvas.offsetHeight;
   const dpr = window.devicePixelRatio || 1;
-  const width = Math.max(1, Math.round(rect.width * dpr));
-  const height = Math.max(1, Math.round(rect.height * dpr));
+  const width = Math.max(1, Math.round(logicalWidth * dpr));
+  const height = Math.max(1, Math.round(logicalHeight * dpr));
   if (layer.canvas.width === width && layer.canvas.height === height) {
     return;
   }
   layer.dpr = dpr;
-  layer.width = rect.width;
-  layer.height = rect.height;
+  layer.width = logicalWidth;
+  layer.height = logicalHeight;
   layer.canvas.width = width;
   layer.canvas.height = height;
   layer.context.setTransform(dpr, 0, 0, dpr, 0, 0);

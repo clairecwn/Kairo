@@ -93,6 +93,11 @@ export function installImages({ stage, onChange = () => {} }) {
     });
   }
 
+  function zoomScale() {
+    const rect = stage.getBoundingClientRect();
+    return rect.width > 0 ? stage.offsetWidth / rect.width : 1;
+  }
+
   function installDrag(handle, apply) {
     let last = null;
     handle.addEventListener("pointerdown", (event) => {
@@ -105,7 +110,8 @@ export function installImages({ stage, onChange = () => {} }) {
       if (!last) {
         return;
       }
-      apply(event.clientX - last.x, event.clientY - last.y);
+      const scale = zoomScale();
+      apply((event.clientX - last.x) * scale, (event.clientY - last.y) * scale);
       last = { x: event.clientX, y: event.clientY };
     });
     const end = () => {
