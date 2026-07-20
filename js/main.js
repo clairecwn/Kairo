@@ -56,7 +56,11 @@ const layout = installLayout({
   stage: inkStage,
   getLines,
   getStrokes,
-  getCompactMode: () => tools.state.compact
+  getCompactMode: () => tools.state.compact,
+  // Stage-local (pre-zoom) y of the current visible top — a tall A4/A3 page
+  // must still compact within what's ON SCREEN, not the whole sheet, or
+  // "auto" compaction would never seem to engage.
+  getViewportTop: () => stageWrap.scrollTop / zoom
 });
 const pins = installPins({
   stage: inkStage,
@@ -179,6 +183,7 @@ const inkSurface = createInkSurface({
         redo: () => restoreStrokeById(id)
       });
       workspace.markDirty();
+      scrollAnchorIntoView();
       return id;
     },
     getStrokes
@@ -189,6 +194,27 @@ const inkSurface = createInkSurface({
     workspace.markDirty();
   }
 });
+
+// Keeps the line being written on screen even on a page taller than the
+// viewport (A4/A3), so writing never requires a manual scroll.
+function scrollAnchorIntoView() {
+  const lines = getLines();
+  const last = lines[lines.length - 1];
+  if (!last) {
+    return;
+  }
+  const dy = commit.getLineDy(last.id);
+  const anchorTop = (last.bbox.minY - dy) * zoom;
+  const anchorBottom = anchorTop + last.bbox.height * zoom;
+  const visibleTop = stageWrap.scrollTop;
+  const visibleBottom = visibleTop + stageWrap.clientHeight;
+  const margin = 60;
+  if (anchorBottom > visibleBottom - margin) {
+    stageWrap.scrollTop += anchorBottom - (visibleBottom - margin);
+  } else if (anchorTop < visibleTop + margin) {
+    stageWrap.scrollTop = Math.max(0, anchorTop - margin);
+  }
+}
 
 const erasedRecords = new Map();
 
@@ -343,6 +369,9 @@ function installZoom() {
     event.preventDefault();
     setZoom(zoom * (event.deltaY < 0 ? 1.1 : 0.9));
   }, { passive: false });
+
+  // Compaction depends on the visible viewport, so recompute as it scrolls.
+  stageWrap.addEventListener("scroll", () => scheduleLayout());
 }
 
 /* ---------- Image intake (upload + paste straight onto the page) ---------- */
@@ -893,7 +922,7 @@ function buildSwatches(container, colors, getActive, onPick) {
     button.type = "button";
     button.title = color.label;
     button.style.background = color.id === "auto"
-      ? "linear-gradient(135deg, #2A2A26 50%, #ECE9E2 50%)"
+      ? `linear-gradient(135deg, ${color.light} 50%, ${color.dark} 50%)`
       : color.value;
     button.addEventListener("click", () => {
       onPick(color.id);

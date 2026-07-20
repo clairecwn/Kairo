@@ -1,4 +1,4 @@
-const CACHE_NAME = "kairo-static-v7";
+const CACHE_NAME = "kairo-static-v8";
 const STATIC_ASSETS = [
   "./",
   "./index.html",
@@ -36,12 +36,21 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// Network-first for our own files: always prefer the latest deployed code,
+// only falling back to cache when offline. A stale cache-first strategy here
+// previously meant re-deploys could silently keep serving old JS.
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") {
     return;
   }
 
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request))
+    fetch(event.request)
+      .then((response) => {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
