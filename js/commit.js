@@ -219,6 +219,7 @@ export function installCommitController(options) {
     addStroke: addCommittedStroke,
     commitLine,
     getLineDy,
+    getCommittedLineIds: () => [...state.committedLineIds],
     serialize,
     load,
     destroy() {

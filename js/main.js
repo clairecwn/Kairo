@@ -6,7 +6,7 @@ import { installLayout, scheduleLayout } from "./layout.js";
 import { installPins } from "./pins.js";
 import { installText } from "./text.js";
 import { installTools, FONTS, BACKGROUNDS, PAGE_SIZES } from "./tools.js";
-import { installWorkspace } from "./workspace.js";
+import { installWorkspace, LABEL_COLORS } from "./workspace.js";
 import { PEN_COLORS, PEN_SIZES, resolveStrokeColor } from "./render.js";
 import {
   assignStroke,
@@ -40,6 +40,11 @@ const noteTitleInput = document.querySelector(".note-title");
 const sidePanel = document.querySelector(".side-panel");
 
 let zoom = clampZoom(Number(window.localStorage.getItem("kairo.zoom")) || 1);
+let renderHomeGrid = () => {};
+
+// A4's own portrait ratio — used for "Full" so the page reads as a real sheet
+// of paper (tall) instead of stretching to match a wide landscape window.
+const PORTRAIT_RATIO = 1123 / 794;
 
 function clampZoom(value) {
   return Math.min(2, Math.max(0.5, Number.isFinite(value) ? value : 1));
@@ -55,10 +60,13 @@ const layout = installLayout({
 });
 const pins = installPins({
   stage: inkStage,
+  railHost: document.querySelector(".pin-rail"),
+  overlayHost: stageWrap,
   layout,
   getLines,
   getStrokes,
   isSelectionAllowed: () => tools.getTool() === "pen" || tools.getTool() === "highlighter",
+  getSelectableLineIds: () => commit.getCommittedLineIds(),
   onDeleteLines: deleteLines,
   onBeforeSelect: () => inkSurface?.cancelActive(),
   onAfterSelect: (lineId) => {
@@ -290,15 +298,17 @@ window.getLines = getLines;
 /* ---------- View: page size, zoom, scroll ---------- */
 
 function applyView() {
-  const wrapWidth = stageWrap.clientWidth;
-  const wrapHeight = stageWrap.clientHeight;
-  const widths = {
-    full: wrapWidth,
-    medium: Math.min(860, wrapWidth),
-    narrow: Math.min(640, wrapWidth)
-  };
-  const width = widths[tools.state.pageSize] || wrapWidth;
-  const height = wrapHeight;
+  const wrapWidth = Math.max(200, stageWrap.clientWidth - 48);
+  const sizeEntry = PAGE_SIZES.find((size) => size.id === tools.state.pageSize) || PAGE_SIZES[0];
+  let width;
+  let height;
+  if (sizeEntry.id === "full") {
+    width = Math.max(320, Math.min(900, wrapWidth));
+    height = width * PORTRAIT_RATIO;
+  } else {
+    width = sizeEntry.width;
+    height = sizeEntry.height;
+  }
   inkStage.style.width = `${width}px`;
   inkStage.style.height = `${height}px`;
   inkStage.style.transform = `scale(${zoom})`;
@@ -384,6 +394,7 @@ function installSidebar() {
     if (!sidePanel.hidden) {
       renderSidebar();
     }
+    applyView();
   });
   sidePanel.querySelector("[data-side='add-page']").addEventListener("click", () => {
     workspace.addPage();
@@ -398,6 +409,23 @@ function installSidebar() {
   sidePanel.querySelector("[data-side='add-folder']").addEventListener("click", () => {
     workspace.createFolder(null);
     renderSidebar();
+  });
+
+  // Dropping a dragged notebook directly on the tree background (not on a
+  // file row) un-files it back to the top level.
+  const tree = sidePanel.querySelector(".side-tree");
+  tree.addEventListener("dragover", (event) => {
+    if (event.dataTransfer.types.includes("application/kairo-note")) {
+      event.preventDefault();
+    }
+  });
+  tree.addEventListener("drop", (event) => {
+    event.preventDefault();
+    const noteId = event.dataTransfer.getData("application/kairo-note");
+    if (noteId) {
+      workspace.moveNoteToFolder(noteId, null);
+      renderSidebar();
+    }
   });
 }
 
@@ -441,6 +469,11 @@ function renderFolderRow(folder, depth) {
   row.className = "side-folder-row";
   row.style.paddingLeft = `${10 + depth * 16}px`;
 
+  const dot = colorDot(folder.color, (color) => {
+    workspace.setFolderColor(folder.id, color);
+    renderSidebar();
+  });
+
   const name = document.createElement("span");
   name.className = "side-folder-name";
   name.textContent = folder.name;
@@ -463,45 +496,147 @@ function renderFolderRow(folder, depth) {
     }
   });
 
-  const addNote = sideIconButton("＋", "New note in folder", () => {
+  const addNote = sideIconButton("＋", "New notebook in this file", () => {
     const note = workspace.createNote("Untitled note", folder.id);
     workspace.openNote(note.id);
     noteTitleInput.value = note.title;
     refreshWorkspaceUi();
   });
-  const addSub = sideIconButton("📁", "New sub-folder", () => {
+  const addSub = sideIconButton("📁", "New sub-file", () => {
     workspace.createFolder(folder.id);
     renderSidebar();
   });
-  const del = sideIconButton("×", "Delete folder (contents move up)", () => {
-    workspace.deleteFolder(folder.id);
-    renderSidebar();
+  const del = sideIconButton("×", "Delete file (notebooks move up)", () => {
+    if (window.confirm(`Delete "${folder.name}"? Notebooks inside move up one level.`)) {
+      workspace.deleteFolder(folder.id);
+      renderSidebar();
+    }
   });
 
-  row.append(folderGlyph(), name, addNote, addSub, del);
+  row.append(dot, name, addNote, addSub, del);
+
+  row.addEventListener("dragover", (event) => {
+    if (event.dataTransfer.types.includes("application/kairo-note")) {
+      event.preventDefault();
+      row.classList.add("is-drop-target");
+    }
+  });
+  row.addEventListener("dragleave", () => row.classList.remove("is-drop-target"));
+  row.addEventListener("drop", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    row.classList.remove("is-drop-target");
+    const noteId = event.dataTransfer.getData("application/kairo-note");
+    if (noteId) {
+      workspace.moveNoteToFolder(noteId, folder.id);
+      renderSidebar();
+    }
+  });
+
   return row;
 }
 
 function renderNoteRow(note, depth) {
-  const row = document.createElement("button");
-  row.type = "button";
+  const row = document.createElement("div");
   row.className = "side-note-row";
+  row.draggable = true;
+  row.tabIndex = 0;
+  row.setAttribute("role", "button");
   row.classList.toggle("is-active", workspace.currentNote()?.id === note.id);
   row.style.paddingLeft = `${14 + depth * 16}px`;
-  row.textContent = note.title;
-  row.addEventListener("click", () => {
+  row.title = "Drag onto a file to file it away";
+
+  const dot = colorDot(note.color, (color) => {
+    workspace.setNoteColor(note.id, color);
+    renderSidebar();
+  });
+
+  const label = document.createElement("span");
+  label.className = "side-note-label";
+  label.textContent = note.title;
+
+  const del = sideIconButton("×", "Delete notebook", () => {
+    if (window.confirm(`Delete "${note.title}"? All its pages are permanently removed.`)) {
+      const wasCurrent = workspace.currentNote()?.id === note.id;
+      workspace.deleteNote(note.id);
+      if (wasCurrent) {
+        workspace.closeNote();
+        homeScreen.hidden = false;
+        renderHomeGrid();
+      }
+      renderSidebar();
+    }
+  });
+
+  row.append(dot, label, del);
+  const open = () => {
     workspace.openNote(note.id);
     noteTitleInput.value = note.title;
     refreshWorkspaceUi();
+  };
+  row.addEventListener("click", open);
+  row.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      open();
+    }
+  });
+  row.addEventListener("dragstart", (event) => {
+    event.dataTransfer.setData("application/kairo-note", note.id);
+    event.dataTransfer.effectAllowed = "move";
   });
   return row;
 }
 
-function folderGlyph() {
-  const glyph = document.createElement("span");
-  glyph.className = "side-folder-glyph";
-  glyph.textContent = "▸";
-  return glyph;
+function colorDot(color, onPick) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "side-color-dot";
+  button.title = "Set color";
+  button.setAttribute("aria-label", "Set color");
+  const swatch = LABEL_COLORS.find((entry) => entry.id === color);
+  button.style.background = swatch ? swatch.value : "transparent";
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    openColorPicker(button, onPick);
+  });
+  return button;
+}
+
+function openColorPicker(anchor, onPick) {
+  const popover = document.querySelector("#color-popover");
+  const row = popover.querySelector("[data-label-colors]");
+  row.replaceChildren();
+  const clearOption = document.createElement("button");
+  clearOption.type = "button";
+  clearOption.className = "swatch";
+  clearOption.title = "No color";
+  clearOption.style.background = "transparent";
+  clearOption.style.border = "1.5px dashed var(--border)";
+  clearOption.addEventListener("click", () => {
+    onPick(null);
+    popover.hidden = true;
+  });
+  row.appendChild(clearOption);
+  for (const color of LABEL_COLORS) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "swatch";
+    button.title = color.id;
+    button.style.background = color.value;
+    button.addEventListener("click", () => {
+      onPick(color.id);
+      popover.hidden = true;
+    });
+    row.appendChild(button);
+  }
+  const rect = anchor.getBoundingClientRect();
+  popover.style.top = `${rect.bottom + 6}px`;
+  popover.style.left = `${Math.min(rect.left, window.innerWidth - 220)}px`;
+  popover.style.right = "auto";
+  for (const other of document.querySelectorAll(".popover")) {
+    other.hidden = other !== popover;
+  }
 }
 
 function sideIconButton(label, title, onClick) {
@@ -538,6 +673,10 @@ function installHomeScreen() {
       const updated = new Date(note.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
       card.innerHTML = `<span class="home-card-title"></span><span class="home-card-meta">${note.pageIds.length} page${note.pageIds.length > 1 ? "s" : ""} · ${updated}</span>`;
       card.querySelector(".home-card-title").textContent = note.title;
+      const swatch = LABEL_COLORS.find((entry) => entry.id === note.color);
+      if (swatch) {
+        card.style.setProperty("--card-color", swatch.value);
+      }
       card.addEventListener("click", () => enterNote(note.id));
 
       const remove = document.createElement("span");
@@ -547,13 +686,16 @@ function installHomeScreen() {
       remove.textContent = "×";
       remove.addEventListener("click", (event) => {
         event.stopPropagation();
-        workspace.deleteNote(note.id);
-        renderGrid();
+        if (window.confirm(`Delete "${note.title}"? All its pages are permanently removed.`)) {
+          workspace.deleteNote(note.id);
+          renderGrid();
+        }
       });
       card.appendChild(remove);
       grid.appendChild(card);
     }
   }
+  renderHomeGrid = renderGrid;
 
   function enterNote(noteId) {
     workspace.openNote(noteId);
@@ -609,13 +751,27 @@ function installPager() {
     workspace.addPage();
     refreshWorkspaceUi();
   });
+  document.querySelector("[data-page='delete']").addEventListener("click", () => {
+    if (workspace.pageCount() <= 1) {
+      return;
+    }
+    if (window.confirm("Delete this page? This can't be undone.")) {
+      workspace.deletePage();
+      refreshWorkspaceUi();
+    }
+  });
   updatePager();
 }
 
 function updatePager() {
   const label = document.querySelector(".page-pager-label");
+  const count = workspace ? workspace.pageCount() : 1;
   if (label) {
-    label.textContent = `${workspace ? workspace.pageIndex + 1 : 1} / ${workspace ? workspace.pageCount() : 1}`;
+    label.textContent = `${workspace ? workspace.pageIndex + 1 : 1} / ${count}`;
+  }
+  const deleteButton = document.querySelector("[data-page='delete']");
+  if (deleteButton) {
+    deleteButton.disabled = count <= 1;
   }
 }
 
@@ -677,7 +833,7 @@ function installToolbar() {
   buildPills(document.querySelector("[data-text-fonts]"), FONTS, () => tools.state.font, (id) => tools.set({ font: id }));
   buildSwatches(document.querySelector("[data-text-colors]"), PEN_COLORS, () => tools.state.textColor, (id) => tools.set({ textColor: id }));
   buildPills(document.querySelector("[data-backgrounds]"), BACKGROUNDS.map((id) => ({ id, label: id[0].toUpperCase() + id.slice(1) })), () => tools.state.background, (id) => tools.set({ background: id }));
-  buildPills(document.querySelector("[data-page-sizes]"), PAGE_SIZES.map((id) => ({ id, label: id[0].toUpperCase() + id.slice(1) })), () => tools.state.pageSize, (id) => tools.set({ pageSize: id }));
+  buildPills(document.querySelector("[data-page-sizes]"), PAGE_SIZES, () => tools.state.pageSize, (id) => tools.set({ pageSize: id }));
   buildPills(
     document.querySelector("[data-compact-modes]"),
     [{ id: "auto", label: "Auto (when full)" }, { id: "off", label: "Never" }],

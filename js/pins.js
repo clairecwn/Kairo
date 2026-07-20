@@ -9,10 +9,13 @@ const MAX_PINS = 4;
 export function installPins(options) {
   const {
     stage,
+    railHost = stage,
+    overlayHost = railHost,
     layout,
     getLines,
     getStrokes,
     isSelectionAllowed = () => true,
+    getSelectableLineIds = () => null,
     onDeleteLines = () => {},
     onBeforeSelect = () => {},
     onAfterSelect = () => {},
@@ -62,15 +65,18 @@ export function installPins(options) {
   stage.appendChild(topHandle);
   stage.appendChild(bottomHandle);
 
-  const column = document.createElement("aside");
+  // The pin rail lives OUTSIDE the (possibly zoomed) paper — a fixed-width
+  // sibling column, so reference cards never shrink with page zoom and the
+  // paper itself stays free to center in the remaining space.
+  const column = document.createElement("div");
   column.className = "pin-column";
   column.setAttribute("aria-label", "Pinned reference cards");
-  stage.appendChild(column);
+  railHost.appendChild(column);
 
   const overlay = document.createElement("div");
   overlay.className = "pin-overlay";
   overlay.hidden = true;
-  stage.appendChild(overlay);
+  overlayHost.appendChild(overlay);
 
   function makeHandle(edge) {
     const handle = document.createElement("div");
@@ -156,7 +162,10 @@ export function installPins(options) {
     }
 
     const point = pointFromEvent(event, stage);
-    const hit = layout.hitTestLine(point);
+    // Only committed lines are selectable — the line currently being written
+    // is never a candidate, or every subsequent stroke on it risks a 600ms
+    // long-press racing the pen and hijacking the in-progress stroke.
+    const hit = layout.hitTestLine(point, getSelectableLineIds());
     if (!hit) {
       clearSelection();
       return;
