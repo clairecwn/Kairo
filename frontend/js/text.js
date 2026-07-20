@@ -1,6 +1,8 @@
 import { resolveStrokeColor } from "./render.js";
 
-export function installText({ stage, tools }) {
+const QUESTION_PATTERN = /\?|^\s*q(uestion)?\s*\d*[.:)]/i;
+
+export function installText({ stage, tools, onChanged = () => {} }) {
   const layer = document.createElement("div");
   layer.className = "text-layer";
   stage.appendChild(layer);
@@ -58,7 +60,12 @@ export function installText({ stage, tools }) {
     editable.addEventListener("blur", () => {
       if (!editable.textContent.trim()) {
         destroy();
+        onChanged();
+        return;
       }
+      // Typed questions are detected automatically ("...?", "Q1.", "Question 2:").
+      wrap.classList.toggle("is-question", QUESTION_PATTERN.test(editable.textContent));
+      onChanged();
     });
 
     wrap.addEventListener("pointerdown", (event) => event.stopPropagation());
@@ -95,11 +102,18 @@ export function installText({ stage, tools }) {
   function load(records) {
     layer.replaceChildren();
     for (const record of records || []) {
-      addTextBox(record.point, { ...record, silent: true });
+      const wrap = addTextBox(record.point, { ...record, silent: true });
+      wrap.classList.toggle("is-question", QUESTION_PATTERN.test(record.text || ""));
     }
+    onChanged();
   }
 
-  return { addTextBox, refreshColors, serialize, load };
+  function getQuestionText() {
+    const box = layer.querySelector(".text-box.is-question .text-box-input");
+    return box ? box.textContent.trim() : null;
+  }
+
+  return { addTextBox, refreshColors, serialize, load, getQuestionText };
 }
 
 function snapshotOf(wrap, editable) {

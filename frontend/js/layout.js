@@ -12,6 +12,7 @@ let historyLayer = null;
 let getLines = null;
 let getStrokes = null;
 let getLineDy = () => 0;
+let getCompactMode = () => "auto";
 let penPosition = null;
 let penIsDown = false;
 let queuedLayout = false;
@@ -29,6 +30,9 @@ export function installLayout(options) {
   getStrokes = options.getStrokes;
   if (options.getLineDy) {
     getLineDy = options.getLineDy;
+  }
+  if (options.getCompactMode) {
+    getCompactMode = options.getCompactMode;
   }
 
   historyLayer = document.createElement("div");
@@ -219,26 +223,47 @@ function getLayoutTargets(lines) {
   });
   ceilingBottom = anchorY;
 
-  // First pass: age-based scales; every line keeps its written position unless
-  // it would actually overlap the line below it (no manufactured gaps — lines
-  // written tightly must NOT be nudged).
+  const compactMode = getCompactMode();
+
+  // "Free" mode: a plain notepad — nothing ever scales or moves. For doodles,
+  // diagrams, and anyone who prefers adding pages over compaction.
+  if (compactMode === "off") {
+    for (let index = 0; index < committed.length; index += 1) {
+      const line = committed[index];
+      targets.push({
+        line,
+        age: committed.length - 1 - index,
+        scale: 1,
+        x: line.bbox.minX,
+        y: line.bbox.minY - getLineDy(line.id)
+      });
+    }
+    return targets;
+  }
+
+  // Auto mode, first pass: full scale, written positions. A line is only pulled
+  // up when it would actually overlap the line below (no manufactured gaps, no
+  // age shrink — nothing is "adjusted" while the page still has room).
   const placed = [];
   for (let index = committed.length - 1; index >= 0; index -= 1) {
     const line = committed[index];
     const age = committed.length - 1 - index;
-    const scale = referenceLineIds.has(line.id)
-      ? 1
-      : Math.max(MIN_SCALE, 1 - age * 0.09);
-    const height = Math.max(LINE_HEIGHT_FALLBACK * 0.6, line.bbox.height) * scale;
+    const height = Math.max(LINE_HEIGHT_FALLBACK * 0.6, line.bbox.height);
     const writtenY = line.bbox.minY - getLineDy(line.id);
     const y = Math.min(writtenY, ceilingBottom - height);
-    placed.unshift({ line, age, scale, x: line.bbox.minX, y, height, gap: 2 });
+    placed.unshift({ line, age, scale: 1, x: line.bbox.minX, y, height, gap: 2 });
     ceilingBottom = y;
   }
 
-  // Overflow pass: if the stack ran off the top, squeeze scales toward the
-  // minimum and re-stack from the bottom anchor.
+  // Overflow pass: only when the page has genuinely run out of room, shrink
+  // older lines (never below 50%) and re-stack from the bottom anchor.
   if (placed.length > 0 && placed[0].y < TOP_MARGIN) {
+    for (const item of placed) {
+      if (!referenceLineIds.has(item.line.id)) {
+        item.scale = Math.max(MIN_SCALE, 1 - item.age * 0.06);
+        item.height = Math.max(LINE_HEIGHT_FALLBACK * 0.6, item.line.bbox.height) * item.scale;
+      }
+    }
     const anchor = targets[0].y - 6;
     const available = anchor - TOP_MARGIN;
     const needed = placed.reduce((sum, item) => sum + item.height + item.gap, 0);

@@ -2,8 +2,10 @@ const INDEX_KEY = "kairo.notes";
 const PAGE_PREFIX = "kairo.page.";
 
 export function installWorkspace({ serializePage, loadPage, clearPage }) {
+  const index = readIndex();
   const state = {
-    notes: readIndex(),
+    notes: index.notes,
+    folders: index.folders,
     noteId: null,
     pageIndex: 0,
     dirty: false,
@@ -12,28 +14,69 @@ export function installWorkspace({ serializePage, loadPage, clearPage }) {
 
   function readIndex() {
     try {
-      return JSON.parse(window.localStorage.getItem(INDEX_KEY)) || [];
+      const raw = JSON.parse(window.localStorage.getItem(INDEX_KEY));
+      if (Array.isArray(raw)) {
+        // Migrate the pre-folders format.
+        return { folders: [], notes: raw.map((note) => ({ ...note, folderId: note.folderId || null })) };
+      }
+      return { folders: raw?.folders || [], notes: raw?.notes || [] };
     } catch {
-      return [];
+      return { folders: [], notes: [] };
     }
   }
 
   function writeIndex() {
     try {
-      window.localStorage.setItem(INDEX_KEY, JSON.stringify(state.notes));
+      window.localStorage.setItem(INDEX_KEY, JSON.stringify({ folders: state.folders, notes: state.notes }));
     } catch {
       // Storage full or unavailable: keep working in memory.
     }
+  }
+
+  function createFolder(parentId = null, name = "New folder") {
+    const folder = { id: `folder-${Date.now().toString(36)}-${state.folders.length}`, name, parentId };
+    state.folders.push(folder);
+    writeIndex();
+    return folder;
+  }
+
+  function renameFolder(folderId, name) {
+    const folder = state.folders.find((candidate) => candidate.id === folderId);
+    if (folder) {
+      folder.name = name.trim() || "Untitled folder";
+      writeIndex();
+    }
+  }
+
+  function deleteFolder(folderId) {
+    const folder = state.folders.find((candidate) => candidate.id === folderId);
+    if (!folder) {
+      return;
+    }
+    // Children and notes move up to the deleted folder's parent.
+    for (const child of state.folders) {
+      if (child.parentId === folderId) {
+        child.parentId = folder.parentId;
+      }
+    }
+    for (const note of state.notes) {
+      if (note.folderId === folderId) {
+        note.folderId = folder.parentId;
+      }
+    }
+    state.folders = state.folders.filter((candidate) => candidate.id !== folderId);
+    writeIndex();
   }
 
   function currentNote() {
     return state.notes.find((note) => note.id === state.noteId) || null;
   }
 
-  function createNote(title = "Untitled note") {
+  function createNote(title = "Untitled note", folderId = null) {
     const note = {
       id: `note-${Date.now().toString(36)}`,
       title,
+      folderId,
       pageIds: [`page-${Date.now().toString(36)}`],
       updatedAt: Date.now()
     };
@@ -102,16 +145,16 @@ export function installWorkspace({ serializePage, loadPage, clearPage }) {
   }
 
   function switchPage(delta) {
+    switchToPage(state.pageIndex + delta);
+  }
+
+  function switchToPage(indexTarget) {
     const note = currentNote();
-    if (!note) {
-      return;
-    }
-    const next = state.pageIndex + delta;
-    if (next < 0 || next >= note.pageIds.length) {
+    if (!note || indexTarget < 0 || indexTarget >= note.pageIds.length || indexTarget === state.pageIndex) {
       return;
     }
     saveNow();
-    state.pageIndex = next;
+    state.pageIndex = indexTarget;
     loadCurrentPage();
   }
 
@@ -166,6 +209,9 @@ export function installWorkspace({ serializePage, loadPage, clearPage }) {
     get notes() {
       return state.notes;
     },
+    get folders() {
+      return state.folders;
+    },
     get pageIndex() {
       return state.pageIndex;
     },
@@ -175,9 +221,13 @@ export function installWorkspace({ serializePage, loadPage, clearPage }) {
     openNote,
     closeNote,
     renameNote,
+    createFolder,
+    renameFolder,
+    deleteFolder,
     pageCount,
     addPage,
     switchPage,
+    switchToPage,
     markDirty,
     saveNow
   };

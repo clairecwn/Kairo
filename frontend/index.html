@@ -15,6 +15,9 @@
         <button class="tool-button standalone" data-action="home" title="My notes" aria-label="Back to my notes">
           <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 9.5L10 3.5l6.5 6v6a1 1 0 01-1 1h-3.5v-4.5h-4V16.5H5a1 1 0 01-1-1v-6z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
         </button>
+        <button class="tool-button standalone" data-action="sidebar" title="Pages & folders" aria-label="Toggle pages and folders panel">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 3h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1zm4.5 0v14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        </button>
         <input class="note-title" type="text" value="Untitled note" aria-label="Note title" maxlength="60">
 
         <div class="tool-groups">
@@ -32,6 +35,10 @@
             <button class="tool-button" data-tool="text" data-popover="text-popover" title="Text box">
               <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 5h12M10 5v10m-2.5 0h5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
             </button>
+            <label class="tool-button" for="image-input" title="Insert image (question paper, screenshot — or just paste with Ctrl+V)">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 14l3.5-4.5 2.5 3 2-2.5L16 14H4zm10-6a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM3 3h14a1 1 0 011 1v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+            </label>
+            <input id="image-input" class="question-file-input" type="file" accept="image/*">
           </div>
 
           <div class="tool-group">
@@ -58,22 +65,6 @@
         </div>
       </header>
 
-      <section class="question-panel" aria-label="Pinned question">
-        <div class="question-band">
-          <button class="question-preview" type="button" title="Enlarge question">
-            <img class="question-image" alt="Pinned problem statement" hidden>
-            <span class="question-empty">No question yet — upload or paste (Ctrl+V) a screenshot of the problem</span>
-          </button>
-          <label class="chip-button" for="question-input" title="Upload question image (or paste with Ctrl+V)">
-            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 14l3.5-4.5 2.5 3 2-2.5L16 14H4zm10-6a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM3 3h14a1 1 0 011 1v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
-          </label>
-          <input id="question-input" class="question-file-input" type="file" accept="image/*">
-          <button class="chip-button question-collapse" type="button" title="Collapse question" aria-label="Collapse question panel">
-            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
-        </div>
-      </section>
-
       <div class="popover" id="pen-popover" hidden>
         <div class="popover-row" data-pen-colors></div>
         <div class="popover-row" data-pen-sizes></div>
@@ -87,7 +78,27 @@
         <div class="popover-row" data-backgrounds></div>
         <div class="popover-label">Width</div>
         <div class="popover-row" data-page-sizes></div>
+        <div class="popover-label">History compaction</div>
+        <div class="popover-row" data-compact-modes></div>
       </div>
+
+      <aside class="side-panel" hidden aria-label="Pages and folders">
+        <div class="side-section">
+          <div class="side-heading">Pages
+            <button type="button" class="side-add" data-side="add-page" title="New page" aria-label="New page">＋</button>
+          </div>
+          <div class="side-pages"></div>
+        </div>
+        <div class="side-section side-grow">
+          <div class="side-heading">Notebook
+            <button type="button" class="side-add" data-side="add-folder" title="New folder" aria-label="New folder">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5.5A1.5 1.5 0 014.5 4h3l1.6 2H15.5A1.5 1.5 0 0117 7.5v7A1.5 1.5 0 0115.5 16h-11A1.5 1.5 0 013 14.5v-9zM10 9v4m-2-2h4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button type="button" class="side-add" data-side="add-note" title="New note" aria-label="New note">＋</button>
+          </div>
+          <div class="side-tree"></div>
+        </div>
+      </aside>
 
       <section class="stage-wrap">
         <section class="ink-stage" aria-label="Handwriting surface">
@@ -105,9 +116,19 @@
 
     <section class="home-screen" hidden>
       <div class="home-inner">
-        <h1 class="home-title">Welcome to <span>Kairo</span></h1>
-        <p class="home-subtitle">The notepad that keeps your whole solution on one screen — question, every step, and your key results.</p>
-        <button class="home-new" type="button">＋ New note</button>
+        <div class="home-hero">
+          <div class="home-hero-copy">
+            <h1 class="home-title">Welcome to <span>Kairo</span></h1>
+            <p class="home-subtitle">The student notepad that keeps your whole solution on one screen — the question, every step you've written, and your key results. No scrolling, no lost train of thought.</p>
+            <button class="home-new" type="button">＋ New note</button>
+          </div>
+          <div class="home-hero-cards" aria-hidden="true">
+            <div class="home-feature"><span class="home-feature-icon">✍️</span><strong>Ink stays put</strong><span>No timers, no jumping — write and think at your own pace.</span></div>
+            <div class="home-feature"><span class="home-feature-icon">📌</span><strong>Pin key results</strong><span>Keep formulas and substitutions always in view.</span></div>
+            <div class="home-feature"><span class="home-feature-icon">🗂️</span><strong>Notes & folders</strong><span>Pages, folders and sub-folders — organized like your binder.</span></div>
+          </div>
+        </div>
+        <div class="home-grid-heading">Your notes</div>
         <div class="home-grid" aria-label="Your notes"></div>
       </div>
     </section>

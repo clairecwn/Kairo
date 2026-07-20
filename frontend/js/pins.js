@@ -22,6 +22,7 @@ export function installPins(options) {
   const state = {
     selection: null, // { lineIds: [contiguous line ids in document order] }
     pins: [],
+    question: null, // { type: "image", src } | { type: "text", text } | null
     press: null,
     handleDrag: null,
     overlayKey: null,
@@ -349,8 +350,76 @@ export function installPins(options) {
     return { lines, strokes, bbox };
   }
 
+  function setQuestion(question) {
+    state.question = question;
+    if (!question && state.overlayKey === "question") {
+      dismissOverlay();
+    }
+    renderPins();
+  }
+
+  function renderQuestionCard() {
+    if (!state.question) {
+      return;
+    }
+    const card = document.createElement("div");
+    card.className = "question-card";
+    card.tabIndex = 0;
+    card.setAttribute("role", "button");
+    card.title = "Tap to read the question full-size (stays open while you write)";
+
+    const label = document.createElement("span");
+    label.className = "question-card-label";
+    label.textContent = "Question";
+    card.appendChild(label);
+
+    if (state.question.type === "image") {
+      const img = document.createElement("img");
+      img.src = state.question.src;
+      img.alt = "Question";
+      card.appendChild(img);
+    } else {
+      const body = document.createElement("span");
+      body.className = "question-card-text";
+      body.textContent = state.question.text;
+      card.appendChild(body);
+    }
+
+    const toggle = () => {
+      if (state.overlayKey === "question" && !overlay.hidden) {
+        dismissOverlay();
+        return;
+      }
+      overlay.replaceChildren();
+      if (state.question.type === "image") {
+        const image = document.createElement("img");
+        image.src = state.question.src;
+        image.alt = "Question";
+        image.className = "pin-overlay-image";
+        overlay.appendChild(image);
+      } else {
+        const body = document.createElement("p");
+        body.className = "pin-overlay-text";
+        body.textContent = state.question.text;
+        overlay.appendChild(body);
+      }
+      overlay.hidden = false;
+      state.overlayKey = "question";
+      state.overlaySticky = true;
+    };
+    card.addEventListener("click", toggle);
+    card.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        toggle();
+      }
+    });
+    column.appendChild(card);
+  }
+
   function renderPins() {
     column.replaceChildren();
+    renderQuestionCard();
     for (const pin of state.pins) {
       const content = pinContent(pin);
       if (!content) {
@@ -571,6 +640,7 @@ export function installPins(options) {
     renderPins,
     serializePins,
     loadPins,
+    setQuestion,
     showImageOverlay,
     destroy() {
       cancelPress();

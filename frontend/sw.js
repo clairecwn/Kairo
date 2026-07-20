@@ -1,4 +1,4 @@
-const CACHE_NAME = "kairo-static-v4";
+const CACHE_NAME = "kairo-static-v5";
 const STATIC_ASSETS = [
   "./",
   "./index.html",
@@ -16,6 +16,7 @@ const STATIC_ASSETS = [
   "./js/tools.js",
   "./js/text.js",
   "./js/workspace.js",
+  "./js/images.js",
   "./assets/demo-question.png"
 ];
 
