@@ -63,12 +63,13 @@ export function installText({ stage, tools }) {
 
     wrap.addEventListener("pointerdown", (event) => event.stopPropagation());
 
-    window.setTimeout(() => editable.focus(), 0);
-
-    tools.history.push({
-      undo: () => destroy(),
-      redo: () => layer.appendChild(wrap)
-    });
+    if (!options.silent) {
+      window.setTimeout(() => editable.focus(), 0);
+      tools.history.push({
+        undo: () => destroy(),
+        redo: () => layer.appendChild(wrap)
+      });
+    }
 
     return wrap;
   }
@@ -79,7 +80,26 @@ export function installText({ stage, tools }) {
     }
   }
 
-  return { addTextBox, refreshColors };
+  function serialize() {
+    return [...layer.querySelectorAll(".text-box")].map((wrap) => {
+      const editable = wrap.querySelector(".text-box-input");
+      return {
+        point: { x: parseFloat(wrap.style.left), y: parseFloat(wrap.style.top) },
+        text: editable.textContent,
+        fontStack: editable.style.fontFamily,
+        color: editable.dataset.colorId || "auto"
+      };
+    }).filter((box) => box.text.trim());
+  }
+
+  function load(records) {
+    layer.replaceChildren();
+    for (const record of records || []) {
+      addTextBox(record.point, { ...record, silent: true });
+    }
+  }
+
+  return { addTextBox, refreshColors, serialize, load };
 }
 
 function snapshotOf(wrap, editable) {

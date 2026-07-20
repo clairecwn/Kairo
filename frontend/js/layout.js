@@ -208,10 +208,8 @@ function getLayoutTargets(lines) {
   if (!openLine) {
     committed = committed.slice(0, -1);
   }
-  const anchorY = Math.min(
-    anchorLine.bbox.minY - getLineDy(anchorLine.id),
-    rect.height - Math.max(LINE_HEIGHT_FALLBACK, anchorLine.bbox.height) - 8
-  );
+  // The anchor is never moved — it is where the pen is (or just was).
+  const anchorY = anchorLine.bbox.minY - getLineDy(anchorLine.id);
   targets.push({
     line: anchorLine,
     age: 0,
@@ -219,9 +217,11 @@ function getLayoutTargets(lines) {
     x: anchorLine.bbox.minX,
     y: anchorY
   });
-  ceilingBottom = anchorY - 6;
+  ceilingBottom = anchorY;
 
-  // First pass: age-based scales, written positions clamped by the line below.
+  // First pass: age-based scales; every line keeps its written position unless
+  // it would actually overlap the line below it (no manufactured gaps — lines
+  // written tightly must NOT be nudged).
   const placed = [];
   for (let index = committed.length - 1; index >= 0; index -= 1) {
     const line = committed[index];
@@ -229,11 +229,10 @@ function getLayoutTargets(lines) {
     const scale = referenceLineIds.has(line.id)
       ? 1
       : Math.max(MIN_SCALE, 1 - age * 0.09);
-    const gap = Math.max(3, 10 - age * 1.5);
     const height = Math.max(LINE_HEIGHT_FALLBACK * 0.6, line.bbox.height) * scale;
     const writtenY = line.bbox.minY - getLineDy(line.id);
-    const y = Math.min(writtenY, ceilingBottom - gap - height);
-    placed.unshift({ line, age, scale, x: line.bbox.minX, y, height, gap });
+    const y = Math.min(writtenY, ceilingBottom - height);
+    placed.unshift({ line, age, scale, x: line.bbox.minX, y, height, gap: 2 });
     ceilingBottom = y;
   }
 

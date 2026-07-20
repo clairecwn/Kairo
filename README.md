@@ -4,13 +4,15 @@ A tablet-first handwriting workspace that eliminates scrolling while writing lon
 
 ## Features
 
-- **Notepad-true ink**: strokes never move while you write; layout adjusts only when you start the next line.
+- **Notepad-true ink**: strokes never move while you write — not even with tight line spacing; layout adjusts only when you start the next line and space is needed.
+- **Edit any line directly**: write on an earlier line to fix it (segmentation reopens it); tap a line to select, drag the handles to grow the selection, then pin or delete it.
+- **Notes & pages**: welcome/home screen with all your notes, multiple pages per note, auto-saved locally.
 - **Compacted history**: older lines gently shrink (never below 50%) so everything stays visible — no scrolling.
-- **Pinned excerpt cards**: tap a line to pin it as an always-visible reference card; tap the card for a full-size overlay.
+- **Pinned excerpt cards**: readable reference cards with editable labels; hover/tap opens a full-size overlay that stays while you keep writing.
 - **AI layer** (via optional proxy): handwriting recognition per line, reference detection (keeps the referenced line full-size), key-result pin suggestions.
-- **Question band**: upload or paste (Ctrl+V) a question image / screenshot, pinned at the top.
+- **Question panel**: upload or paste (Ctrl+V) the problem; collapsible, tap to enlarge.
 - **Tools**: pen (6 colors × 3 sizes), highlighter, stroke eraser, text boxes (4 fonts, 6 colors), undo/redo (Ctrl+Z / Ctrl+Y).
-- **Paper**: plain / ruled / grid / dots backgrounds, full / medium / narrow page widths, light and dark mode.
+- **Design**: Lexend typeface (readability-optimized), calm indigo theme, plain / ruled / grid / dots paper, page widths, light and dark mode, first-run walkthrough.
 
 ## Run
 

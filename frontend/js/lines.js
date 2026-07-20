@@ -78,6 +78,51 @@ export function createNewLineForStroke(stroke) {
   return line.id;
 }
 
+export function serializeLines() {
+  return lines
+    .filter((line) => line.bbox)
+    .map((line) => ({
+      id: line.id,
+      strokeIds: line.strokeIds.slice(),
+      bbox: { ...line.bbox },
+      baseline: line.baseline,
+      startX: line.startX,
+      medianXHeight: line.medianXHeight,
+      strokeHeights: line.strokeHeights.slice(),
+      text: line.text,
+      isKeyResult: line.isKeyResult
+    }));
+}
+
+export function loadLines(records) {
+  lines.length = 0;
+  strokeLineIds.clear();
+  let maxId = 0;
+  for (const record of records || []) {
+    const line = {
+      id: record.id,
+      strokeIds: record.strokeIds.slice(),
+      bbox: { ...record.bbox },
+      baseline: record.baseline,
+      startX: record.startX,
+      medianXHeight: record.medianXHeight || DEFAULT_X_HEIGHT,
+      strokeHeights: (record.strokeHeights || []).slice(),
+      text: record.text || "",
+      isKeyResult: Boolean(record.isKeyResult)
+    };
+    lines.push(line);
+    for (const strokeId of line.strokeIds) {
+      strokeLineIds.set(strokeId, line.id);
+    }
+    const numeric = Number(String(record.id).replace("line-", ""));
+    if (Number.isFinite(numeric)) {
+      maxId = Math.max(maxId, numeric);
+    }
+  }
+  nextLineId = Math.max(nextLineId, maxId + 1);
+  lastAssignment = null;
+}
+
 export function restoreLine(lineId) {
   let line = lines.find((candidate) => candidate.id === lineId);
   if (!line) {

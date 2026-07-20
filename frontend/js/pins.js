@@ -14,7 +14,9 @@ export function installPins(options) {
     getStrokes,
     isSelectionAllowed = () => true,
     onDeleteLines = () => {},
-    onBeforeSelect = () => {}
+    onBeforeSelect = () => {},
+    onAfterSelect = () => {},
+    onPinsChanged = () => {}
   } = options;
 
   const state = {
@@ -159,25 +161,29 @@ export function installPins(options) {
       return;
     }
 
-    // Selection matrix: finger-tap selects any line instantly; committed lines
-    // also select on mouse click; the line being written (open) only selects
-    // via press-and-hold so pointer-down can keep meaning "continue writing".
-    if (event.pointerType === "touch" || (hit.isCommitted && event.pointerType === "mouse")) {
+    // Finger-tap selects instantly (fingers don't write on tablets).
+    if (event.pointerType === "touch") {
       event.preventDefault();
       event.stopImmediatePropagation();
       selectLine(hit);
       return;
     }
 
-    // Pen (any line) or mouse on the open line: let the event propagate so
-    // writing / re-entry works; a still long-press selects instead.
+    // Pen and mouse always propagate so the line can be edited straight away
+    // (commit.js re-enters it, ink draws into it — even for old lines). A quick
+    // tap (mouse) or a still long-press (pen/mouse) selects instead of writing.
     state.press = {
       pointerId: event.pointerId,
+      pointerType: event.pointerType,
       start: point,
+      startedAt: Date.now(),
       hit,
       timer: window.setTimeout(() => {
-        onBeforeSelect();
-        selectLine(hit);
+        if (state.press?.hit === hit) {
+          onBeforeSelect();
+          selectLine(hit);
+          cancelPress();
+        }
       }, LONG_PRESS_MS)
     };
   }
@@ -196,7 +202,14 @@ export function installPins(options) {
     if (!state.press || state.press.pointerId !== event.pointerId) {
       return;
     }
+    const press = state.press;
     cancelPress();
+    // Quick mouse tap on a line = select it (and swallow the would-be ink dot).
+    if (press.pointerType === "mouse" && Date.now() - press.startedAt < 400) {
+      onBeforeSelect();
+      selectLine(press.hit);
+      onAfterSelect(press.hit.lineId);
+    }
   }
 
   function selectLine(hit) {
@@ -292,8 +305,24 @@ export function installPins(options) {
     }
     const key = existing.join("+");
     state.pins = state.pins.filter((pin) => pin.key !== key);
-    state.pins.unshift({ key, lineIds: existing });
+    state.pins.unshift({ key, lineIds: existing, caption: "" });
     state.pins = state.pins.slice(0, MAX_PINS);
+    renderPins();
+    onPinsChanged();
+  }
+
+  function serializePins() {
+    return state.pins.map((pin) => ({ lineIds: pin.lineIds.slice(), caption: pin.caption || "" }));
+  }
+
+  function loadPins(records) {
+    state.pins = (records || []).map((record) => ({
+      key: record.lineIds.join("+"),
+      lineIds: record.lineIds.slice(),
+      caption: record.caption || ""
+    }));
+    dismissOverlay();
+    clearSelection();
     renderPins();
   }
 
@@ -353,6 +382,28 @@ export function installPins(options) {
       }
       renderInk(canvas, content.strokes, crop);
 
+      const caption = document.createElement("div");
+      caption.className = "pin-card-caption";
+      caption.contentEditable = "true";
+      caption.spellcheck = false;
+      caption.dataset.placeholder = "Add label…";
+      caption.textContent = pin.caption || "";
+      caption.addEventListener("pointerdown", (event) => event.stopPropagation());
+      caption.addEventListener("pointerenter", (event) => event.stopPropagation());
+      caption.addEventListener("click", (event) => event.stopPropagation());
+      caption.addEventListener("blur", () => {
+        pin.caption = caption.textContent.trim();
+        onPinsChanged();
+      });
+      caption.addEventListener("keydown", (event) => {
+        event.stopPropagation();
+        if (event.key === "Enter") {
+          event.preventDefault();
+          caption.blur();
+        }
+      });
+      card.appendChild(caption);
+
       card.addEventListener("pointerenter", (event) => {
         if (event.pointerType === "touch") {
           return;
@@ -381,6 +432,7 @@ export function installPins(options) {
           dismissOverlay();
         }
         renderPins();
+        onPinsChanged();
       });
       column.appendChild(card);
     }
@@ -517,6 +569,8 @@ export function installPins(options) {
   return {
     pinLine,
     renderPins,
+    serializePins,
+    loadPins,
     showImageOverlay,
     destroy() {
       cancelPress();

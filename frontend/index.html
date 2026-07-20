@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#FAF9F5">
+    <meta name="theme-color" content="#F6F7F9">
     <title>Kairo</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#128395;</text></svg>">
     <link rel="manifest" href="./manifest.json">
@@ -12,17 +12,10 @@
   <body>
     <main class="app-shell" aria-label="Kairo handwriting workspace">
       <header class="top-bar">
-        <div class="brand" title="Kairo">Kairo</div>
-
-        <section class="question-band" aria-label="Pinned question">
-          <button class="question-preview" type="button" title="Enlarge question">
-            <img class="question-image" alt="Pinned problem statement" hidden>
-          </button>
-          <label class="chip-button" for="question-input" title="Upload question image (or paste with Ctrl+V)">
-            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 14l3.5-4.5 2.5 3 2-2.5L16 14H4zm10-6a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM3 3h14a1 1 0 011 1v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
-          </label>
-          <input id="question-input" class="question-file-input" type="file" accept="image/*">
-        </section>
+        <button class="tool-button standalone" data-action="home" title="My notes" aria-label="Back to my notes">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 9.5L10 3.5l6.5 6v6a1 1 0 01-1 1h-3.5v-4.5h-4V16.5H5a1 1 0 01-1-1v-6z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        </button>
+        <input class="note-title" type="text" value="Untitled note" aria-label="Note title" maxlength="60">
 
         <div class="tool-groups">
           <div class="tool-group" role="toolbar" aria-label="Drawing tools">
@@ -42,16 +35,16 @@
           </div>
 
           <div class="tool-group">
-            <button class="tool-button" data-action="undo" title="Undo (Ctrl+Z)">
+            <button class="tool-button" data-action="undo" title="Undo (Ctrl+Z)" aria-label="Undo">
               <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7.5 5L4 8.5 7.5 12M4 8.5h8a4 4 0 010 8h-2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
-            <button class="tool-button" data-action="redo" title="Redo (Ctrl+Y)">
+            <button class="tool-button" data-action="redo" title="Redo (Ctrl+Y)" aria-label="Redo">
               <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M12.5 5L16 8.5 12.5 12M16 8.5H8a4 4 0 000 8h2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
           </div>
 
           <div class="tool-group">
-            <button class="tool-button" data-popover="page-popover" title="Page style">
+            <button class="tool-button" data-popover="page-popover" title="Page style" aria-label="Page style">
               <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 3h10a1 1 0 011 1v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1zm2 4h6M7 10h6M7 13h4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
             </button>
             <button class="tool-button" data-action="help" title="Show walkthrough" aria-label="Show walkthrough">
@@ -64,6 +57,22 @@
           </div>
         </div>
       </header>
+
+      <section class="question-panel" aria-label="Pinned question">
+        <div class="question-band">
+          <button class="question-preview" type="button" title="Enlarge question">
+            <img class="question-image" alt="Pinned problem statement" hidden>
+            <span class="question-empty">No question yet — upload or paste (Ctrl+V) a screenshot of the problem</span>
+          </button>
+          <label class="chip-button" for="question-input" title="Upload question image (or paste with Ctrl+V)">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 14l3.5-4.5 2.5 3 2-2.5L16 14H4zm10-6a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM3 3h14a1 1 0 011 1v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+          </label>
+          <input id="question-input" class="question-file-input" type="file" accept="image/*">
+          <button class="chip-button question-collapse" type="button" title="Collapse question" aria-label="Collapse question panel">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </section>
 
       <div class="popover" id="pen-popover" hidden>
         <div class="popover-row" data-pen-colors></div>
@@ -85,8 +94,23 @@
           <canvas id="committed-canvas" class="ink-canvas" aria-hidden="true"></canvas>
           <canvas id="wet-canvas" class="ink-canvas" aria-label="Write solution"></canvas>
         </section>
+        <div class="page-pager" role="navigation" aria-label="Pages">
+          <button type="button" data-page="prev" title="Previous page" aria-label="Previous page">‹</button>
+          <span class="page-pager-label">1 / 1</span>
+          <button type="button" data-page="next" title="Next page" aria-label="Next page">›</button>
+          <button type="button" data-page="add" title="New page" aria-label="New page">＋</button>
+        </div>
       </section>
     </main>
+
+    <section class="home-screen" hidden>
+      <div class="home-inner">
+        <h1 class="home-title">Welcome to <span>Kairo</span></h1>
+        <p class="home-subtitle">The notepad that keeps your whole solution on one screen — question, every step, and your key results.</p>
+        <button class="home-new" type="button">＋ New note</button>
+        <div class="home-grid" aria-label="Your notes"></div>
+      </div>
+    </section>
 
     <script>
       // Set this to your deployed backend proxy URL (e.g. Render service URL) before deploying the frontend.
