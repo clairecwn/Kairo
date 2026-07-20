@@ -33,6 +33,13 @@ export function createInkSurface({ committedCanvas, wetCanvas, store, tools, onE
     if (state.activePointerId !== null) {
       return;
     }
+    // preventDefault() below (needed to stop the browser's own drag/scroll
+    // gestures) also suppresses the normal "click elsewhere blurs the
+    // focused input" behavior, so a focused field (e.g. the note title)
+    // would otherwise stay focused/selected for the entire writing session.
+    if (document.activeElement && document.activeElement !== document.body) {
+      document.activeElement.blur();
+    }
     const tool = tools.getTool();
     if (tool === "text") {
       event.preventDefault();

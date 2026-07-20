@@ -292,10 +292,10 @@ function getLayoutTargets(lines) {
       item.y = bottom - item.gap - item.height;
       bottom = item.y;
     }
-    // Final clamp: stagger anything still above the visible top edge.
-    for (let index = 0; index < placed.length; index += 1) {
-      placed[index].y = Math.max(placed[index].y, topMargin + index * 3);
-    }
+    // If even MIN_SCALE can't make everything fit within the visible top,
+    // the stack is simply allowed to extend above it (scrollable, never
+    // overlapping) — clamping each line's y independently here would ignore
+    // its real height and force lines to collide with their neighbors.
   }
 
   for (const item of placed) {
