@@ -115,6 +115,7 @@ export function createInkSurface({ committedCanvas, wetCanvas, store, tools, onE
 
   return {
     resize,
+    isActive: () => state.activePointerId !== null,
     cancelActive() {
       state.activePointerId = null;
       state.points = [];

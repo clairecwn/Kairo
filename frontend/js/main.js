@@ -70,7 +70,7 @@ const pins = installPins({
   layout,
   getLines,
   getStrokes,
-  isSelectionAllowed: () => tools.getTool() === "pen" || tools.getTool() === "highlighter",
+  isSelectionAllowed: () => (tools.getTool() === "pen" || tools.getTool() === "highlighter") && !inkSurface?.isActive(),
   getSelectableLineIds: () => commit.getCommittedLineIds(),
   onDeleteLines: deleteLines,
   onBeforeSelect: () => inkSurface?.cancelActive(),
@@ -199,14 +199,17 @@ const inkSurface = createInkSurface({
 // Keeps the line being written on screen even on a page taller than the
 // viewport (A4/A3), so writing never requires a manual scroll.
 function scrollAnchorIntoView() {
-  const lines = getLines();
-  const last = lines[lines.length - 1];
-  if (!last) {
+  // Must match the ACTUAL open/re-entered line, not just "the last line by
+  // document order" — otherwise editing an older line via re-entry would
+  // compute the scroll target from the wrong (newest) line entirely.
+  const openLineId = commit.getOpenLineId();
+  const anchor = openLineId ? getLines().find((line) => line.id === openLineId) : null;
+  if (!anchor) {
     return;
   }
-  const dy = commit.getLineDy(last.id);
-  const anchorTop = (last.bbox.minY - dy) * zoom;
-  const anchorBottom = anchorTop + last.bbox.height * zoom;
+  const dy = commit.getLineDy(anchor.id);
+  const anchorTop = (anchor.bbox.minY - dy) * zoom;
+  const anchorBottom = anchorTop + anchor.bbox.height * zoom;
   const visibleTop = stageWrap.scrollTop;
   const visibleBottom = visibleTop + stageWrap.clientHeight;
   const margin = 60;
